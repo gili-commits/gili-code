@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(claude-api)",
+      "Bash(npm install:*)",
+      "Bash(/usr/local/bin/node --version)",
+      "Bash(/opt/homebrew/bin/node --version)",
+      "Read(//usr/local/bin/**)",
+      "Read(//Users/gili/.nvm/versions/**)",
+      "Bash(command -v node npm)"
+    ]
+  }
+}

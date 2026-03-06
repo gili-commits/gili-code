@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ACT — מלווה נפשי אישי</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #eef2f7;
+  --card: #ffffff;
+  --primary: #2c5282;
+  --primary-light: #4299e1;
+  --primary-pale: #ebf8ff;
+  --green: #48bb78;
+  --green-dark: #38a169;
+  --green-pale: #f0fff4;
+  --orange: #ed8936;
+  --orange-pale: #fffaf0;
+  --purple: #7c3aed;
+  --purple-pale: #f5f3ff;
+  --red: #e53e3e;
+  --text: #2d3748;
+  --text-light: #718096;
+  --border: #e2e8f0;
+  --shadow: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-sm: 0 2px 6px rgba(0,0,0,0.06);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --nav: 68px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; }
+body { overflow-x: hidden; }
+
+/* ── Header ── */
+.header {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--primary);
+  color: white;
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(44,82,130,0.3);
+}
+.header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.5px; }
+.header-subtitle { font-size: 0.75rem; opacity: 0.8; }
+.api-badge {
+  font-size: 0.7rem; padding: 3px 8px; border-radius: 20px;
+  background: rgba(255,255,255,0.2); cursor: pointer;
+}
+.api-badge.ok { background: rgba(72,187,120,0.4); }
+
+/* ── Bottom Nav ── */
+.nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  display: flex;
+  height: var(--nav);
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px; cursor: pointer;
+  color: var(--text-light);
+  font-size: 0.6rem; font-weight: 500;
+  transition: color 0.2s, background 0.2s;
+  border: none; background: none;
+  padding: 6px 2px;
+}
+.nav-item svg { width: 22px; height: 22px; }
+.nav-item.active { color: var(--primary); }
+.nav-item.active svg { filter: drop-shadow(0 0 3px rgba(44,82,130,0.3)); }
+
+/* ── Main content ── */
+.main {
+  padding: 16px 16px calc(var(--nav) + 20px);
+  max-width: 640px; margin: 0 auto;
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--card); border-radius: var(--radius);
+  padding: 20px; margin-bottom: 14px;
+  box-shadow: var(--shadow-sm);
+}
+.card-title {
+  font-size: 1rem; font-weight: 700; color: var(--primary);
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.card-title svg { width: 20px; height: 20px; }
+
+/* ── Sections ── */
+.section { display: none; }
+.section.active { display: block; }
+
+/* ── Form elements ── */
+label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+textarea, input[type="text"], input[type="password"], select {
+  width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 12px; font-size: 0.9rem; font-family: inherit;
+  color: var(--text); background: #fafbfc; transition: border 0.2s;
+  resize: vertical;
+}
+textarea:focus, input:focus { outline: none; border-color: var(--primary-light); background: white; }
+.form-group { margin-bottom: 14px; }
+
+/* ── Slider ── */
+.slider-wrap { display: flex; align-items: center; gap: 12px; }
+input[type="range"] {
+  flex: 1; -webkit-appearance: none; height: 6px;
+  background: linear-gradient(to left, #e2e8f0, #e2e8f0);
+  border-radius: 3px; outline: none; cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 22px; height: 22px;
+  border-radius: 50%; background: var(--primary);
+  box-shadow: 0 2px 6px rgba(44,82,130,0.4); cursor: pointer;
+}
+.slider-value {
+  min-width: 36px; text-align: center;
+  font-size: 1.4rem; font-weight: 800; color: var(--primary);
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 11px 22px; border-radius: var(--radius-sm); border: none;
+  font-size: 0.9rem; font-weight: 600; cursor: pointer;
+  transition: all 0.2s; font-family: inherit;
+}
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-light); }
+.btn-green { background: var(--green); color: white; }
+.btn-green:hover { background: var(--green-dark); }
+.btn-ghost { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); }
+.btn-ghost:hover { background: var(--primary-pale); }
+.btn-sm { padding: 7px 14px; font-size: 0.8rem; }
+.btn-full { width: 100%; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Claude response ── */
+.claude-box {
+  background: linear-gradient(135deg, #f0f4ff 0%, #e8f5e9 100%);
+  border: 1px solid #c3dafe; border-radius: var(--radius);
+  padding: 18px; margin-top: 14px;
+  line-height: 1.7; font-size: 0.9rem;
+  white-space: pre-wrap;
+}
+.claude-box.loading::after {
+  content: ''; display: inline-block;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--primary); margin-right: 4px;
+  animation: blink 1s infinite;
+}
+@keyframes blink { 0%,100%{opacity:0.2} 50%{opacity:1} }
+.claude-label {
+  font-size: 0.75rem; font-weight: 700; color: var(--primary);
+  margin-bottom: 8px; display: flex; align-items: center; gap: 5px;
+}
+
+/* ── Intensity colors ── */
+.intensity-1,.intensity-2,.intensity-3 { color: var(--green-dark); }
+.intensity-4,.intensity-5,.intensity-6 { color: var(--orange); }
+.intensity-7,.intensity-8,.intensity-9,.intensity-10 { color: var(--red); }
+
+/* ── Pills / Tags ── */
+.pill {
+  display: inline-block; padding: 3px 10px; border-radius: 20px;
+  font-size: 0.72rem; font-weight: 600; background: var(--primary-pale); color: var(--primary);
+  margin: 2px;
+}
+.pill-green { background: var(--green-pale); color: var(--green-dark); }
+.pill-orange { background: var(--orange-pale); color: var(--orange); }
+.pill-purple { background: var(--purple-pale); color: var(--purple); }
+
+/* ── History list ── */
+.entry {
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 12px 14px; margin-bottom: 8px;
+  cursor: pointer; transition: box-shadow 0.2s;
+}
+.entry:hover { box-shadow: var(--shadow-sm); }
+.entry-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.entry-date { font-size: 0.75rem; color: var(--text-light); }
+.entry-preview { font-size: 0.85rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.entry-body { display: none; margin-top: 10px; font-size: 0.85rem; line-height: 1.6; white-space: pre-wrap; color: var(--text); }
+.entry.expanded .entry-body { display: block; }
+
+/* ── Breathing exercise ── */
+.breathing-container {
+  display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 20px;
+}
+.breathing-circle-wrap {
+  position: relative; width: 180px; height: 180px;
+  display: flex; align-items: center; justify-content: center;
+}
+.breathing-circle {
+  width: 120px; height: 120px; border-radius: 50%;
+  background: radial-gradient(circle, #63b3ed, #2c5282);
+  box-shadow: 0 0 40px rgba(44,82,130,0.3);
+  transition: transform 0.1s;
+}
+.breathing-ring {
+  position: absolute; border-radius: 50%; border: 2px solid rgba(44,82,130,0.2);
+  animation: pulse-ring 4s ease-out infinite;
+}
+@keyframes pulse-ring {
+  0% { width: 120px; height: 120px; opacity: 0.8; }
+  100% { width: 180px; height: 180px; opacity: 0; }
+}
+.breathing-text {
+  font-size: 1.4rem; font-weight: 700; color: var(--primary);
+  text-align: center; min-height: 2rem;
+}
+.breathing-counter {
+  font-size: 2.5rem; font-weight: 800; color: var(--primary-light); min-height: 3rem;
+}
+.breathing-instruction {
+  font-size: 0.85rem; color: var(--text-light); text-align: center; max-width: 260px; line-height: 1.5;
+}
+@keyframes expand { 0%{transform:scale(1)} 100%{transform:scale(1.5)} }
+@keyframes contract { 0%{transform:scale(1.5)} 100%{transform:scale(1)} }
+@keyframes hold { 0%,100%{transform:scale(var(--hold-scale, 1.5))} }
+
+/* ── 5-4-3-2-1 ── */
+.senses-step { display: none; }
+.senses-step.active { display: block; }
+.sense-icon { font-size: 2.5rem; text-align: center; margin-bottom: 8px; }
+.sense-inputs { display: flex; flex-direction: column; gap: 6px; }
+.sense-input {
+  padding: 8px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 0.9rem; font-family: inherit; background: #fafbfc; color: var(--text);
+}
+.sense-input:focus { outline: none; border-color: var(--primary-light); }
+
+/* ── Values ── */
+.value-item { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 10px; }
+.value-domain { font-weight: 700; font-size: 0.9rem; color: var(--primary); margin-bottom: 8px; }
+.value-score-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.value-score-label { font-size: 0.78rem; color: var(--text-light); white-space: nowrap; }
+
+/* ── Charts ── */
+.chart-wrap { position: relative; height: 200px; margin: 10px 0; }
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.stat-card {
+  background: var(--primary-pale); border-radius: var(--radius-sm); padding: 14px; text-align: center;
+}
+.stat-num { font-size: 1.8rem; font-weight: 800; color: var(--primary); }
+.stat-label { font-size: 0.75rem; color: var(--text-light); margin-top: 2px; }
+.patterns-list { list-style: none; }
+.patterns-list li { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+.patterns-list li:last-child { border-bottom: none; }
+.patterns-list li::before { content: '◆ '; color: var(--primary); font-size: 0.7rem; }
+
+/* ── Calendar ── */
+.calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-day {
+  aspect-ratio: 1; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; font-weight: 600; background: var(--bg); color: var(--text-light);
+}
+.cal-day.has-entry { background: #fed7d7; color: #c53030; }
+.cal-day.has-win { background: #c6f6d5; color: #276749; }
+.cal-day.today { border: 2px solid var(--primary); }
+.cal-header { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; }
+.cal-header span { text-align: center; font-size: 0.65rem; color: var(--text-light); font-weight: 600; }
+
+/* ── Wins list ── */
+.win-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px; border-radius: var(--radius-sm);
+  background: var(--green-pale); border: 1px solid #c6f6d5; margin-bottom: 6px;
+}
+.win-check { font-size: 1.1rem; color: var(--green-dark); margin-top: 2px; }
+.win-text { font-size: 0.85rem; flex: 1; }
+.win-date { font-size: 0.72rem; color: var(--text-light); }
+
+/* ── Avoidance ── */
+.avoid-item {
+  border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 8px;
+}
+.avoid-item.completed { background: var(--green-pale); border-color: #c6f6d5; }
+.avoid-header { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
+.avoid-desc { font-size: 0.85rem; font-weight: 600; flex: 1; }
+.avoid-complete-btn {
+  padding: 5px 12px; border-radius: 20px; border: none; cursor: pointer; font-size: 0.75rem; font-weight: 600;
+  background: var(--green); color: white; white-space: nowrap; flex-shrink: 0;
+}
+.avoid-complete-btn.done { background: var(--green-dark); cursor: default; }
+.avoid-response { font-size: 0.82rem; color: var(--text-light); margin-top: 8px; line-height: 1.6; display: none; }
+.avoid-item.expanded .avoid-response { display: block; }
+
+/* ── Alerts ── */
+.alert {
+  padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 14px;
+  font-size: 0.85rem; line-height: 1.5;
+}
+.alert-warning { background: #fefcbf; border: 1px solid #f6e05e; color: #744210; }
+.alert-info { background: var(--primary-pale); border: 1px solid #bee3f8; color: var(--primary); }
+.alert-success { background: var(--green-pale); border: 1px solid #c6f6d5; color: #276749; }
+
+/* ── Defusion ── */
+.defusion-step { margin-bottom: 16px; }
+.defusion-thought {
+  padding: 14px; border-radius: var(--radius-sm);
+  background: #fff5f5; border: 1px solid #fed7d7;
+  font-size: 1rem; color: #c53030; font-weight: 600; margin-bottom: 8px;
+}
+.defusion-reframe {
+  padding: 14px; border-radius: var(--radius-sm);
+  background: var(--green-pale); border: 1px solid #c6f6d5;
+  font-size: 1rem; color: var(--green-dark); font-weight: 600; margin-bottom: 8px;
+}
+.defusion-observe {
+  padding: 14px; border-radius: var(--radius-sm);
+  background: var(--primary-pale); border: 1px solid #bee3f8;
+  font-size: 1rem; color: var(--primary); font-weight: 600;
+}
+
+/* ── Body scan ── */
+.body-scan-step { display: none; }
+.body-scan-step.active { display: block; }
+.body-part-img {
+  width: 100%; max-width: 200px; margin: 0 auto 14px; display: block;
+  font-size: 3rem; text-align: center;
+}
+.body-instruction { font-size: 0.9rem; line-height: 1.7; color: var(--text); }
+
+/* ── Upload area ── */
+.upload-area {
+  border: 2px dashed var(--border); border-radius: var(--radius); padding: 24px;
+  text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s;
+}
+.upload-area:hover { border-color: var(--primary-light); background: var(--primary-pale); }
+.upload-area.drag { border-color: var(--primary); background: var(--primary-pale); }
+.upload-icon { font-size: 2rem; margin-bottom: 8px; }
+.uploaded-files { margin-top: 12px; }
+.file-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 20px;
+  background: var(--primary-pale); color: var(--primary); font-size: 0.78rem; margin: 3px;
+}
+
+/* ── Empty state ── */
+.empty { text-align: center; padding: 40px 20px; color: var(--text-light); }
+.empty-icon { font-size: 2.5rem; margin-bottom: 10px; }
+.empty p { font-size: 0.85rem; }
+
+/* ── Loading ── */
+.spinner {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 3px solid var(--border); border-top-color: var(--primary);
+  animation: spin 0.8s linear infinite; display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: calc(var(--nav) + 16px); left: 50%; transform: translateX(-50%);
+  background: #2d3748; color: white; padding: 10px 20px; border-radius: 24px;
+  font-size: 0.85rem; z-index: 200; opacity: 0; transition: opacity 0.3s;
+  pointer-events: none; white-space: nowrap;
+}
+.toast.show { opacity: 1; }
+
+/* ── Responsive ── */
+@media (max-width: 380px) {
+  .main { padding: 12px 12px calc(var(--nav) + 16px); }
+  .stats-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div>
+    <div class="header h1" style="font-size:1.1rem;font-weight:700;color:white;">ACT — מלווה נפשי</div>
+    <div style="font-size:0.72rem;opacity:0.8;color:white;">Acceptance & Commitment Therapy</div>
+  </div>
+  <div class="api-badge" id="api-badge" onclick="showTab('settings')">טוען...</div>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- CRISIS -->
+  <div class="section active" id="tab-crisis">
+    <div id="no-api-warning" class="alert alert-warning" style="display:none">
+      מפתח API לא הוגדר — <strong onclick="showTab('settings')" style="cursor:pointer;text-decoration:underline">לחץ כאן להגדרה</strong>
+    </div>
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        רגע המשבר — כאן ועכשיו
+      </div>
+      <form id="crisis-form">
+        <div class="form-group">
+          <label>עוצמת החרדה</label>
+          <div class="slider-wrap">
+            <span style="font-size:0.78rem;color:var(--text-light)">1</span>
+            <input type="range" id="intensity" min="1" max="10" value="5" oninput="updateIntensity(this.value)">
+            <span style="font-size:0.78rem;color:var(--text-light)">10</span>
+            <span class="slider-value" id="intensity-val">5</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>מה קרה?</label>
+          <textarea id="crisis-event" rows="2" placeholder="תאר בקצרה את מה שקרה..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>מה אני חושב עכשיו?</label>
+          <textarea id="crisis-thoughts" rows="2" placeholder="אילו מחשבות עוברות לך?..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>מה אני מרגיש בגוף?</label>
+          <textarea id="crisis-body" rows="2" placeholder="לחץ בחזה? מתח בכתפיים?..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>כמה זמן זה נמשך?</label>
+          <input type="text" id="crisis-duration" placeholder="לדוגמה: 20 דקות, שעה...">
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" id="crisis-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          שלח לקבלת עזרה
+        </button>
+      </form>
+    </div>
+
+    <div id="crisis-response-wrap" style="display:none">
+      <div class="claude-label">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--primary)"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3" stroke="white" stroke-width="2" fill="none"/></svg>
+        Claude מגיב...
+      </div>
+      <div class="claude-box" id="crisis-response"></div>
+    </div>
+
+    <div class="card" id="crisis-history-card" style="display:none">
+      <div class="card-title" style="margin-bottom:10px">אירועי חרדה אחרונים</div>
+      <div id="crisis-history"></div>
+    </div>
+  </div>
+
+  <!-- DREAMS -->
+  <div class="section" id="tab-dreams">
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        יומן חלומות
+      </div>
+      <form id="dream-form">
+        <div class="form-group">
+          <label>ספר את החלום בחופשיות</label>
+          <textarea id="dream-content" rows="6" placeholder="תאר את החלום כפי שזוכר אותו — דמויות, מקומות, תחושות, צבעים..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" id="dream-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          פרש את החלום
+        </button>
+      </form>
+    </div>
+
+    <div id="dream-response-wrap" style="display:none">
+      <div class="claude-label">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--purple)"><circle cx="12" cy="12" r="10"/></svg>
+        פרשנות ACT + יונג
+      </div>
+      <div class="claude-box" id="dream-response"></div>
+    </div>
+
+    <div class="card" id="dream-history-card" style="display:none">
+      <div class="card-title" style="margin-bottom:10px">חלומות קודמים</div>
+      <div id="dream-history"></div>
+    </div>
+  </div>
+
+  <!-- AVOIDANCE -->
+  <div class="section" id="tab-avoidance">
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M4.93 4.93l14.14 14.14"/></svg>
+        הימנעות — צעד קטן היום
+      </div>
+      <p style="font-size:0.85rem;color:var(--text-light);margin-bottom:14px;line-height:1.6">
+        הימנעות מדבר חשוב היא סימן שהוא חשוב לך. בוא נמצא ביחד צעד אחד קטן.
+      </p>
+      <form id="avoidance-form">
+        <div class="form-group">
+          <label>ממה נמנעת היום?</label>
+          <textarea id="avoidance-desc" rows="3" placeholder="לדוגמה: לא התקשרתי לרופא, לא פתחתי את תיק העבודה..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" id="avoidance-btn">
+          מצא לי צעד קטן
+        </button>
+      </form>
+    </div>
+
+    <div id="avoidance-response-wrap" style="display:none">
+      <div class="claude-label">הצעד הקטן שלך</div>
+      <div class="claude-box" id="avoidance-response"></div>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button class="btn btn-green" id="mark-done-btn" style="flex:1" onclick="markAvoidanceDone()">
+          ✓ עשיתי את הצעד!
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="resetAvoidanceForm()">חדש</button>
+      </div>
+    </div>
+
+    <!-- Wins banner -->
+    <div id="wins-banner" style="display:none" class="alert alert-success">
+      <strong>ניצחונות קטנים</strong> — <span id="wins-count">0</span> צעדים הושלמו!
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:10px">היסטוריית הימנעויות</div>
+      <div id="avoidance-list"></div>
+    </div>
+  </div>
+
+  <!-- EXERCISES -->
+  <div class="section" id="tab-exercises">
+    <!-- Breathing -->
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22a10 10 0 1 1 0-20 10 10 0 0 1 0 20z"/><path d="M12 8v8M8 12h8"/></svg>
+        נשימה סרעפתית
+      </div>
+      <div class="breathing-container">
+        <div class="breathing-instruction">נשום יחד עם הגלגל. היה נוכח עם כל נשימה.</div>
+        <div class="breathing-circle-wrap">
+          <div class="breathing-ring"></div>
+          <div class="breathing-circle" id="breath-circle"></div>
+        </div>
+        <div class="breathing-text" id="breath-phase">לחץ להתחלה</div>
+        <div class="breathing-counter" id="breath-count"></div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary" id="breath-btn" onclick="toggleBreathing()">התחל</button>
+          <select id="breath-pattern" style="padding:8px 12px;border-radius:8px;border:1.5px solid var(--border)">
+            <option value="4-4-6-2">4-4-6-2 (מרגיע)</option>
+            <option value="4-7-8-0">4-7-8 (שינה)</option>
+            <option value="5-0-5-0">5-5 (פשוט)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Defusion -->
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        דפיוזיה קוגניטיבית
+      </div>
+      <p style="font-size:0.85rem;color:var(--text-light);margin-bottom:14px;line-height:1.6">
+        מחשבות הן לא עובדות. תרגיל זה עוזר לראות מחשבות כמחשבות — ולא כמציאות.
+      </p>
+      <div id="defusion-input-area">
+        <div class="form-group">
+          <label>רשום מחשבה קשה שמעסיקה אותך</label>
+          <textarea id="defusion-thought" rows="2" placeholder="לדוגמה: אני לא מסוגל, זה לא יעבור..."></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="runDefusion()">המשך</button>
+      </div>
+      <div id="defusion-steps" style="display:none">
+        <div class="defusion-step">
+          <p style="font-size:0.82rem;color:var(--text-light);margin-bottom:8px">המחשבה המקורית:</p>
+          <div class="defusion-thought" id="def-original"></div>
+        </div>
+        <div class="defusion-step" style="margin-top:12px">
+          <p style="font-size:0.82rem;color:var(--text-light);margin-bottom:8px">אותה מחשבה — כמחשבה:</p>
+          <div class="defusion-reframe" id="def-reframe"></div>
+        </div>
+        <div class="defusion-step" style="margin-top:12px">
+          <p style="font-size:0.82rem;color:var(--text-light);margin-bottom:8px">צפה ממרחק:</p>
+          <div class="defusion-observe" id="def-observe"></div>
+        </div>
+        <p style="font-size:0.82rem;color:var(--text-light);margin-top:14px;line-height:1.7">
+          שים לב: יש הבדל בין להיות מחשבה לבין לראות אותה. אתה הצופה — לא המחשבה.
+        </p>
+        <button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="resetDefusion()">מחשבה חדשה</button>
+      </div>
+    </div>
+
+    <!-- 5-4-3-2-1 -->
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        5-4-3-2-1 חושים
+      </div>
+      <div id="senses-exercise">
+        <div class="senses-step active" id="sense-0">
+          <div class="sense-icon">👁️</div>
+          <p style="font-weight:700;font-size:1rem;text-align:center;margin-bottom:12px">5 דברים שאתה רואה</p>
+          <div class="sense-inputs">
+            <input class="sense-input" placeholder="1. אני רואה..."><input class="sense-input" placeholder="2."><input class="sense-input" placeholder="3."><input class="sense-input" placeholder="4."><input class="sense-input" placeholder="5.">
+          </div>
+        </div>
+        <div class="senses-step" id="sense-1">
+          <div class="sense-icon">✋</div>
+          <p style="font-weight:700;font-size:1rem;text-align:center;margin-bottom:12px">4 דברים שאתה יכול לגעת</p>
+          <div class="sense-inputs">
+            <input class="sense-input" placeholder="1. אני מרגיש..."><input class="sense-input" placeholder="2."><input class="sense-input" placeholder="3."><input class="sense-input" placeholder="4.">
+          </div>
+        </div>
+        <div class="senses-step" id="sense-2">
+          <div class="sense-icon">👂</div>
+          <p style="font-weight:700;font-size:1rem;text-align:center;margin-bottom:12px">3 דברים שאתה שומע</p>
+          <div class="sense-inputs">
+            <input class="sense-input" placeholder="1. אני שומע..."><input class="sense-input" placeholder="2."><input class="sense-input" placeholder="3.">
+          </div>
+        </div>
+        <div class="senses-step" id="sense-3">
+          <div class="sense-icon">👃</div>
+          <p style="font-weight:700;font-size:1rem;text-align:center;margin-bottom:12px">2 דברים שאתה מריח</p>
+          <div class="sense-inputs">
+            <input class="sense-input" placeholder="1. אני מריח..."><input class="sense-input" placeholder="2.">
+          </div>
+        </div>
+        <div class="senses-step" id="sense-4">
+          <div class="sense-icon">👅</div>
+          <p style="font-weight:700;font-size:1rem;text-align:center;margin-bottom:12px">דבר אחד שאתה טועם</p>
+          <div class="sense-inputs">
+            <input class="sense-input" placeholder="אני טועם...">
+          </div>
+        </div>
+        <div class="senses-step" id="sense-5">
+          <div style="text-align:center;padding:20px">
+            <div style="font-size:2.5rem;margin-bottom:12px">🌿</div>
+            <p style="font-size:1rem;font-weight:700;color:var(--green-dark);margin-bottom:8px">כל הכבוד!</p>
+            <p style="font-size:0.85rem;color:var(--text-light);line-height:1.6">אתה כאן. אתה נוכח. הרגע הזה הוא כל מה שיש — ואתה בו.</p>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:14px">
+          <button class="btn btn-ghost btn-sm" id="sense-prev" onclick="sensesNav(-1)" style="display:none">הקודם</button>
+          <button class="btn btn-primary btn-sm" id="sense-next" onclick="sensesNav(1)">הבא</button>
+        </div>
+        <div style="display:flex;gap:4px;justify-content:center;margin-top:10px" id="sense-dots">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--primary);display:inline-block"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--border);display:inline-block"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--border);display:inline-block"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--border);display:inline-block"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--border);display:inline-block"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Body Scan -->
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        סריקת גוף
+      </div>
+      <div id="body-scan">
+        <div class="body-scan-step active" id="scan-0">
+          <div style="font-size:2.5rem;text-align:center;margin-bottom:12px">🧘</div>
+          <div class="body-instruction">מצא תנוחה נוחה. עצום עיניים לרגע. הניח לגוף שלך להיות בדיוק כפי שהוא — ללא שיפוט.</div>
+        </div>
+        <div class="body-scan-step" id="scan-1">
+          <div style="font-size:2.5rem;text-align:center;margin-bottom:12px">🦶</div>
+          <div class="body-instruction"><strong>כפות הרגליים והאצבעות</strong><br><br>הפנה את תשומת לבך לכפות הרגליים. שים לב לכל תחושה — חמימות, קור, לחץ. אין צורך לשנות כלום. פשוט שים לב.</div>
+        </div>
+        <div class="body-scan-step" id="scan-2">
+          <div style="font-size:2.5rem;text-align:center;margin-bottom:12px">🦵</div>
+          <div class="body-instruction"><strong>שוקיים, ברכיים, ירכיים</strong><br><br>עלה לאט עם תשומת לבך לאורך הרגליים. שים לב לאזורי מתח או רפיון. נשום לאזור הזה.</div>
+        </div>
+        <div class="body-scan-step" id="scan-3">
+          <div style="font-size:2.5rem;text-align:center;margin-bottom:12px">🫁</div>
+          <div class="body-instruction"><strong>בטן, גב, חזה</strong><br><br>עקוב אחרי תנועת הנשימה בגוף. הבטן עולה ויורדת. שים לב לכל מקום של מתח. אפשר לשחרר בנשיפה.</div>
+        </div>
+        <div class="body-scan-step" id="scan-4">
+          <div style="font-size:2.5rem;text-align:center;margin-bottom:12px">💪</div>
+          <div class="body-instruction"><strong>כתפיים, זרועות, ידיים</strong><br><br>שים לב לכתפיים — נקודה נפוצה למתח. האם הן מוגבהות? נשום לאזור הזה, תרשה להן לרדת.</div>
+        </div>
+        <div class="body-scan-step" id="scan-5">
+          <div style="font-size:2.5rem;text-align:center;margin-bottom:12px">🧠</div>
+          <div class="body-instruction"><strong>צוואר, פנים, ראש</strong><br><br>שים לב לצוואר, הלסת, העיניים. שחרר כל מתח מהפנים. הרשה לפנים להיות רכות ופתוחות.</div>
+        </div>
+        <div class="body-scan-step" id="scan-6">
+          <div style="text-align:center;padding:16px">
+            <div style="font-size:2.5rem;margin-bottom:12px">✨</div>
+            <p style="font-size:1rem;font-weight:700;color:var(--primary);margin-bottom:8px">הגוף שלך איתך</p>
+            <p style="font-size:0.85rem;color:var(--text-light);line-height:1.6">הקשבת לגוף שלך. זה מעשה של חמלה עצמית.</p>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:14px">
+          <button class="btn btn-ghost btn-sm" id="scan-prev" onclick="scanNav(-1)" style="display:none">הקודם</button>
+          <button class="btn btn-primary btn-sm" id="scan-next" onclick="scanNav(1)">הבא</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VALUES -->
+  <div class="section" id="tab-values">
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        מפת ערכים
+      </div>
+      <p style="font-size:0.85rem;color:var(--text-light);margin-bottom:16px;line-height:1.6">
+        לכל תחום: מה חשוב לך, ועד כמה אתה חי לפיו כיום (1–10).
+      </p>
+      <div id="values-form"></div>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="saveValues()">שמור ערכים</button>
+        <button class="btn btn-ghost" onclick="getValuesFeedback()">קבל פידבק מ-Claude</button>
+      </div>
+    </div>
+
+    <div id="values-feedback-wrap" style="display:none">
+      <div class="claude-label">פידבק על מפת הערכים</div>
+      <div class="claude-box" id="values-feedback"></div>
+    </div>
+  </div>
+
+  <!-- TRACKING -->
+  <div class="section" id="tab-tracking">
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card"><div class="stat-num" id="stat-total">—</div><div class="stat-label">אירועי חרדה</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-avg">—</div><div class="stat-label">ממוצע עוצמה</div></div>
+      <div class="stat-card" style="background:var(--green-pale)"><div class="stat-num" style="color:var(--green-dark)" id="stat-wins">—</div><div class="stat-label">צעדים קטנים</div></div>
+      <div class="stat-card" style="background:var(--purple-pale)"><div class="stat-num" style="color:var(--purple)" id="stat-dreams">—</div><div class="stat-label">חלומות</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:10px">עוצמת חרדה לאורך זמן</div>
+      <div class="chart-wrap"><canvas id="anxiety-chart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:10px">יומן חודשי</div>
+      <div style="margin-bottom:8px;display:flex;gap:14px;font-size:0.75rem">
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#fed7d7;margin-left:4px"></span>חרדה</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#c6f6d5;margin-left:4px"></span>צעד קטן הושלם</span>
+      </div>
+      <div class="cal-header">
+        <span>א</span><span>ב</span><span>ג</span><span>ד</span><span>ה</span><span>ו</span><span>ש</span>
+      </div>
+      <div class="calendar" id="calendar"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:10px">דפוסים שזוהו</div>
+      <ul class="patterns-list" id="patterns-list"><li>טוען...</li></ul>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="section" id="tab-settings">
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        מפתח Anthropic API
+      </div>
+      <div class="form-group">
+        <label>API Key</label>
+        <input type="password" id="api-key-input" placeholder="sk-ant-...">
+      </div>
+      <button class="btn btn-primary" onclick="saveApiKey()">שמור מפתח</button>
+      <p style="font-size:0.78rem;color:var(--text-light);margin-top:10px;line-height:1.5">
+        המפתח נשמר מקומית במסד הנתונים ולא נשלח לשום מקום.
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        הפרופיל שלי
+      </div>
+      <div class="form-group">
+        <label>שם</label>
+        <input type="text" id="profile-name" placeholder="השם שלך">
+      </div>
+      <div class="form-group">
+        <label>ספר על עצמך (Claude ישתמש בזה להבין אותך טוב יותר)</label>
+        <textarea id="profile-desc" rows="5" placeholder="גיל, מצב משפחתי, אתגרים עיקריים, תחומי עניין, מה שחשוב לך שהמלווה ידע..."></textarea>
+      </div>
+      <button class="btn btn-green" onclick="saveProfile()">שמור פרופיל</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        העלאת קבצים אישיים
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-light);margin-bottom:12px;line-height:1.5">
+        העלה יומן, כתיבה אישית, או סיכומי טיפולים — Claude יקרא אותם וישתמש בהם להבנה אישית מעמיקה יותר.
+      </p>
+      <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+        <div class="upload-icon">📁</div>
+        <p style="font-size:0.85rem;font-weight:600;margin-bottom:4px">לחץ להעלאת קובץ</p>
+        <p style="font-size:0.75rem;color:var(--text-light)">PDF או טקסט, עד 10MB</p>
+      </div>
+      <input type="file" id="file-input" style="display:none" accept=".txt,.pdf,.md" onchange="uploadFile(this)">
+      <div class="uploaded-files" id="uploaded-files"></div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- Bottom Navigation -->
+<nav class="nav">
+  <button class="nav-item active" id="nav-crisis" onclick="showTab('crisis')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+    משבר
+  </button>
+  <button class="nav-item" id="nav-avoidance" onclick="showTab('avoidance')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M4.93 4.93l14.14 14.14"/></svg>
+    הימנעות
+  </button>
+  <button class="nav-item" id="nav-dreams" onclick="showTab('dreams')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    חלומות
+  </button>
+  <button class="nav-item" id="nav-exercises" onclick="showTab('exercises')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+    תרגילים
+  </button>
+  <button class="nav-item" id="nav-values" onclick="showTab('values')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    ערכים
+  </button>
+  <button class="nav-item" id="nav-tracking" onclick="showTab('tracking')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    מעקב
+  </button>
+  <button class="nav-item" id="nav-settings" onclick="showTab('settings')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+    הגדרות
+  </button>
+</nav>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── State ──────────────────────────────────────────────────────────────────
+let breathingActive = false;
+let breathInterval = null;
+let breathTimeout = null;
+let currentAvoidanceId = null;
+let anxietyChart = null;
+let currentSenseStep = 0;
+let currentScanStep = 0;
+
+const DOMAINS = [
+  { id: 'family', label: 'משפחה' },
+  { id: 'relationship', label: 'זוגיות' },
+  { id: 'friends', label: 'חברות' },
+  { id: 'work', label: 'עבודה ולימודים' },
+  { id: 'health', label: 'בריאות' },
+  { id: 'creativity', label: 'יצירה' },
+  { id: 'spirituality', label: 'רוחניות' },
+  { id: 'leisure', label: 'פנאי והנאה' },
+  { id: 'community', label: 'קהילה ותרומה' },
+  { id: 'growth', label: 'התפתחות אישית' },
+];
+
+// ─── Navigation ──────────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+
+  if (name === 'tracking') loadDashboard();
+  if (name === 'crisis') loadCrisisHistory();
+  if (name === 'dreams') loadDreamHistory();
+  if (name === 'avoidance') loadAvoidance();
+  if (name === 'values') loadValues();
+}
+
+// ─── Toast ───────────────────────────────────────────────────────────────────
+function toast(msg, duration = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+// ─── SSE Streaming ───────────────────────────────────────────────────────────
+async function streamResponse(url, body, displayEl, onDone) {
+  displayEl.textContent = '';
+  displayEl.classList.add('loading');
+
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (!resp.ok) throw new Error('שגיאת שרת: ' + resp.status);
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let result = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (raw === '[DONE]') { displayEl.classList.remove('loading'); onDone && onDone(result); return; }
+        try {
+          const data = JSON.parse(raw);
+          if (data.error) { displayEl.textContent = 'שגיאה: ' + data.error; displayEl.classList.remove('loading'); return; }
+          if (data.text) displayEl.textContent += data.text;
+          if (data.id) result = data;
+        } catch (_) {}
+      }
+    }
+    displayEl.classList.remove('loading');
+    onDone && onDone(result);
+  } catch (err) {
+    displayEl.textContent = 'שגיאה: ' + err.message;
+    displayEl.classList.remove('loading');
+  }
+}
+
+// ─── Intensity slider ────────────────────────────────────────────────────────
+function updateIntensity(val) {
+  const el = document.getElementById('intensity-val');
+  el.textContent = val;
+  el.className = 'slider-value intensity-' + val;
+  const pct = (val - 1) / 9 * 100;
+  const color = val <= 3 ? '#48bb78' : val <= 6 ? '#ed8936' : '#e53e3e';
+  document.getElementById('intensity').style.background =
+    `linear-gradient(to right, ${color} ${pct}%, #e2e8f0 ${pct}%)`;
+}
+
+// ─── Crisis form ─────────────────────────────────────────────────────────────
+document.getElementById('crisis-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('crisis-btn');
+  btn.disabled = true; btn.textContent = 'שולח...';
+
+  const wrap = document.getElementById('crisis-response-wrap');
+  wrap.style.display = 'block';
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  await streamResponse('/api/anxiety', {
+    intensity: document.getElementById('intensity').value,
+    event: document.getElementById('crisis-event').value,
+    thoughts: document.getElementById('crisis-thoughts').value,
+    body: document.getElementById('crisis-body').value,
+    duration: document.getElementById('crisis-duration').value
+  }, document.getElementById('crisis-response'), () => {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg> שלח לקבלת עזרה';
+    loadCrisisHistory();
+  });
+});
+
+async function loadCrisisHistory() {
+  try {
+    const data = await fetch('/api/entries').then(r => r.json());
+    const container = document.getElementById('crisis-history');
+    const card = document.getElementById('crisis-history-card');
+    if (!data.anxiety || data.anxiety.length === 0) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    container.innerHTML = data.anxiety.slice(0, 8).map(e => `
+      <div class="entry" onclick="this.classList.toggle('expanded')">
+        <div class="entry-header">
+          <span class="pill intensity-${e.intensity}">${e.intensity}/10</span>
+          <span class="entry-date">${e.date}</span>
+        </div>
+        <div class="entry-preview">${e.event || '—'}</div>
+        <div class="entry-body">${e.claude_response || ''}</div>
+      </div>`).join('');
+  } catch (_) {}
+}
+
+// ─── Dreams form ─────────────────────────────────────────────────────────────
+document.getElementById('dream-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const content = document.getElementById('dream-content').value.trim();
+  if (!content) return toast('אנא כתוב את החלום');
+
+  const btn = document.getElementById('dream-btn');
+  btn.disabled = true; btn.textContent = 'מפרש...';
+
+  const wrap = document.getElementById('dream-response-wrap');
+  wrap.style.display = 'block';
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  await streamResponse('/api/dreams', { content },
+    document.getElementById('dream-response'), () => {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> פרש את החלום';
+      loadDreamHistory();
+    });
+});
+
+async function loadDreamHistory() {
+  try {
+    const data = await fetch('/api/entries').then(r => r.json());
+    const container = document.getElementById('dream-history');
+    const card = document.getElementById('dream-history-card');
+    if (!data.dreams || data.dreams.length === 0) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    container.innerHTML = data.dreams.slice(0, 6).map(d => `
+      <div class="entry" onclick="this.classList.toggle('expanded')">
+        <div class="entry-header">
+          <span class="pill pill-purple">חלום</span>
+          <span class="entry-date">${d.date}</span>
+        </div>
+        <div class="entry-preview">${(d.content || '').slice(0, 60)}...</div>
+        <div class="entry-body">${d.claude_interpretation || ''}</div>
+      </div>`).join('');
+  } catch (_) {}
+}
+
+// ─── Avoidance ───────────────────────────────────────────────────────────────
+document.getElementById('avoidance-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const desc = document.getElementById('avoidance-desc').value.trim();
+  if (!desc) return toast('אנא תאר ממה נמנעת');
+
+  const btn = document.getElementById('avoidance-btn');
+  btn.disabled = true; btn.textContent = 'מחשב צעד קטן...';
+
+  const wrap = document.getElementById('avoidance-response-wrap');
+  wrap.style.display = 'block';
+  currentAvoidanceId = null;
+
+  await streamResponse('/api/avoidance', { description: desc },
+    document.getElementById('avoidance-response'), (result) => {
+      if (result && result.id) currentAvoidanceId = result.id;
+      btn.disabled = false;
+      btn.textContent = 'מצא לי צעד קטן';
+    });
+});
+
+async function markAvoidanceDone() {
+  if (!currentAvoidanceId) return;
+  const btn = document.getElementById('mark-done-btn');
+  btn.disabled = true;
+  try {
+    await fetch('/api/avoidance/' + currentAvoidanceId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completed: true })
+    });
+    btn.textContent = 'מעולה! נרשם';
+    btn.style.background = 'var(--green-dark)';
+    toast('ניצחון קטן! כל הכבוד!');
+    loadAvoidance();
+  } catch (err) {
+    toast('שגיאה: ' + err.message);
+    btn.disabled = false;
+  }
+}
+
+function resetAvoidanceForm() {
+  document.getElementById('avoidance-response-wrap').style.display = 'none';
+  document.getElementById('avoidance-desc').value = '';
+  document.getElementById('avoidance-response').textContent = '';
+  document.getElementById('mark-done-btn').disabled = false;
+  document.getElementById('mark-done-btn').textContent = '✓ עשיתי את הצעד!';
+  document.getElementById('mark-done-btn').style.background = 'var(--green)';
+  currentAvoidanceId = null;
+}
+
+async function loadAvoidance() {
+  try {
+    const entries = await fetch('/api/avoidance').then(r => r.json());
+    const wins = entries.filter(e => e.completed).length;
+    const banner = document.getElementById('wins-banner');
+    if (wins > 0) {
+      banner.style.display = 'block';
+      document.getElementById('wins-count').textContent = wins;
+    } else { banner.style.display = 'none'; }
+
+    const list = document.getElementById('avoidance-list');
+    if (!entries.length) {
+      list.innerHTML = '<div class="empty"><div class="empty-icon">🌱</div><p>טרם נרשמה הימנעות. כשתזהה הימנעות, נעבוד עליה יחד.</p></div>';
+      return;
+    }
+    list.innerHTML = entries.slice(0, 15).map(e => `
+      <div class="avoid-item ${e.completed ? 'completed' : ''}" onclick="this.classList.toggle('expanded')">
+        <div class="avoid-header">
+          <div class="avoid-desc">${e.description}</div>
+          ${!e.completed
+            ? `<button class="avoid-complete-btn" onclick="event.stopPropagation();completeAvoidance(${e.id},this)">עשיתי זאת!</button>`
+            : `<span class="pill pill-green">הושלם</span>`}
+        </div>
+        <div style="font-size:0.72rem;color:var(--text-light);margin-top:3px">${e.date}</div>
+        <div class="avoid-response">${(e.claude_response || '').slice(0, 300)}...</div>
+      </div>`).join('');
+  } catch (err) { console.error(err); }
+}
+
+async function completeAvoidance(id, btn) {
+  btn.disabled = true;
+  try {
+    await fetch('/api/avoidance/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completed: true })
+    });
+    toast('מעולה! הצעד הושלם!');
+    loadAvoidance();
+  } catch (err) { toast('שגיאה'); btn.disabled = false; }
+}
+
+// ─── Breathing ───────────────────────────────────────────────────────────────
+const PATTERNS = {
+  '4-4-6-2': { inhale: 4, hold1: 4, exhale: 6, hold2: 2 },
+  '4-7-8-0': { inhale: 4, hold1: 7, exhale: 8, hold2: 0 },
+  '5-0-5-0': { inhale: 5, hold1: 0, exhale: 5, hold2: 0 },
+};
+
+function toggleBreathing() {
+  if (breathingActive) stopBreathing();
+  else startBreathing();
+}
+
+function startBreathing() {
+  breathingActive = true;
+  document.getElementById('breath-btn').textContent = 'עצור';
+  runBreathCycle();
+}
+
+function stopBreathing() {
+  breathingActive = false;
+  clearTimeout(breathTimeout);
+  document.getElementById('breath-btn').textContent = 'התחל';
+  document.getElementById('breath-phase').textContent = 'לחץ להתחלה';
+  document.getElementById('breath-count').textContent = '';
+  const circle = document.getElementById('breath-circle');
+  circle.style.animation = '';
+  circle.style.transform = '';
+}
+
+function runBreathCycle() {
+  if (!breathingActive) return;
+  const patKey = document.getElementById('breath-pattern').value;
+  const p = PATTERNS[patKey];
+
+  const phases = [
+    { name: 'שאף', dur: p.inhale, scale: 1.5 },
+    ...(p.hold1 ? [{ name: 'החזק', dur: p.hold1, scale: 1.5 }] : []),
+    { name: 'שחרר', dur: p.exhale, scale: 1.0 },
+    ...(p.hold2 ? [{ name: 'המתן', dur: p.hold2, scale: 1.0 }] : []),
+  ];
+
+  let idx = 0;
+  function nextPhase() {
+    if (!breathingActive) return;
+    if (idx >= phases.length) { idx = 0; nextPhase(); return; }
+    const phase = phases[idx++];
+    const circle = document.getElementById('breath-circle');
+    document.getElementById('breath-phase').textContent = phase.name;
+    circle.style.transition = `transform ${phase.dur}s ease-in-out`;
+    circle.style.transform = `scale(${phase.scale})`;
+    let count = phase.dur;
+    document.getElementById('breath-count').textContent = count;
+    const counter = setInterval(() => {
+      count--;
+      if (count > 0) document.getElementById('breath-count').textContent = count;
+    }, 1000);
+    breathTimeout = setTimeout(() => { clearInterval(counter); nextPhase(); }, phase.dur * 1000);
+  }
+  nextPhase();
+}
+
+// ─── Defusion ─────────────────────────────────────────────────────────────────
+function runDefusion() {
+  const thought = document.getElementById('defusion-thought').value.trim();
+  if (!thought) return toast('אנא כתוב מחשבה');
+  document.getElementById('defusion-input-area').style.display = 'none';
+  document.getElementById('defusion-steps').style.display = 'block';
+  document.getElementById('def-original').textContent = thought;
+  document.getElementById('def-reframe').textContent = 'אני חושב ש' + thought;
+  document.getElementById('def-observe').textContent = 'אני מבחין שעולה בי המחשבה ש' + thought;
+}
+function resetDefusion() {
+  document.getElementById('defusion-thought').value = '';
+  document.getElementById('defusion-input-area').style.display = 'block';
+  document.getElementById('defusion-steps').style.display = 'none';
+}
+
+// ─── 5-4-3-2-1 ───────────────────────────────────────────────────────────────
+function sensesNav(dir) {
+  const steps = document.querySelectorAll('.senses-step');
+  steps[currentSenseStep].classList.remove('active');
+  currentSenseStep = Math.max(0, Math.min(steps.length - 1, currentSenseStep + dir));
+  steps[currentSenseStep].classList.add('active');
+
+  document.getElementById('sense-prev').style.display = currentSenseStep > 0 ? '' : 'none';
+  const nextBtn = document.getElementById('sense-next');
+  if (currentSenseStep >= steps.length - 1) {
+    nextBtn.textContent = 'התחל מחדש';
+    nextBtn.onclick = () => { currentSenseStep = -1; sensesNav(1); };
+  } else {
+    nextBtn.textContent = 'הבא';
+    nextBtn.onclick = () => sensesNav(1);
+  }
+
+  const dots = document.querySelectorAll('#sense-dots span');
+  dots.forEach((d, i) => d.style.background = i === currentSenseStep ? 'var(--primary)' : 'var(--border)');
+}
+
+// ─── Body scan ───────────────────────────────────────────────────────────────
+function scanNav(dir) {
+  const steps = document.querySelectorAll('.body-scan-step');
+  steps[currentScanStep].classList.remove('active');
+  currentScanStep = Math.max(0, Math.min(steps.length - 1, currentScanStep + dir));
+  steps[currentScanStep].classList.add('active');
+
+  document.getElementById('scan-prev').style.display = currentScanStep > 0 ? '' : 'none';
+  const nextBtn = document.getElementById('scan-next');
+  if (currentScanStep >= steps.length - 1) {
+    nextBtn.textContent = 'התחל מחדש';
+    nextBtn.onclick = () => { currentScanStep = -1; scanNav(1); };
+  } else {
+    nextBtn.textContent = 'הבא';
+    nextBtn.onclick = () => scanNav(1);
+  }
+}
+
+// ─── Values ──────────────────────────────────────────────────────────────────
+async function loadValues() {
+  const savedValues = await fetch('/api/values').then(r => r.json()).catch(() => []);
+  const form = document.getElementById('values-form');
+  form.innerHTML = DOMAINS.map(d => {
+    const saved = savedValues.find(v => v.domain === d.id) || {};
+    return `
+      <div class="value-item">
+        <div class="value-domain">${d.label}</div>
+        <div class="form-group" style="margin-bottom:6px">
+          <textarea class="value-desc" data-domain="${d.id}" rows="2"
+            placeholder="מה חשוב לך בתחום זה?"
+            style="font-size:0.82rem">${saved.description || ''}</textarea>
+        </div>
+        <div class="value-score-row">
+          <span class="value-score-label">חי לפיו:</span>
+          <input type="range" class="value-score" data-domain="${d.id}" min="1" max="10"
+            value="${saved.score || 5}"
+            oninput="this.nextElementSibling.textContent=this.value"
+            style="flex:1">
+          <span style="min-width:28px;font-weight:700;color:var(--primary);text-align:center">${saved.score || 5}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function getValuesData() {
+  return DOMAINS.map(d => ({
+    domain: d.id,
+    description: document.querySelector(`.value-desc[data-domain="${d.id}"]`)?.value || '',
+    score: parseInt(document.querySelector(`.value-score[data-domain="${d.id}"]`)?.value || '5')
+  }));
+}
+
+async function saveValues() {
+  try {
+    await fetch('/api/values', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: getValuesData() })
+    });
+    toast('הערכים נשמרו');
+  } catch (err) { toast('שגיאה בשמירה'); }
+}
+
+async function getValuesFeedback() {
+  await saveValues();
+  const wrap = document.getElementById('values-feedback-wrap');
+  wrap.style.display = 'block';
+  wrap.scrollIntoView({ behavior: 'smooth' });
+  await streamResponse('/api/values/feedback', { values: getValuesData() },
+    document.getElementById('values-feedback'), null);
+}
+
+// ─── Dashboard ───────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const data = await fetch('/api/dashboard').then(r => r.json());
+    const entries = await fetch('/api/entries').then(r => r.json());
+
+    document.getElementById('stat-total').textContent = data.anxiety.length;
+    document.getElementById('stat-wins').textContent = data.avoidance.filter(a => a.completed).length;
+    document.getElementById('stat-dreams').textContent = data.dreams.length;
+    const avg = data.anxiety.length
+      ? (data.anxiety.reduce((a, b) => a + b.intensity, 0) / data.anxiety.length).toFixed(1)
+      : '—';
+    document.getElementById('stat-avg').textContent = avg;
+
+    // Anxiety chart
+    const labels = data.anxiety.slice(0, 14).reverse().map(e => e.date.slice(5));
+    const values = data.anxiety.slice(0, 14).reverse().map(e => e.intensity);
+
+    if (anxietyChart) anxietyChart.destroy();
+    anxietyChart = new Chart(document.getElementById('anxiety-chart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'עוצמת חרדה',
+          data: values,
+          borderColor: '#4299e1',
+          backgroundColor: 'rgba(66,153,225,0.1)',
+          borderWidth: 2,
+          pointBackgroundColor: values.map(v => v >= 7 ? '#e53e3e' : v >= 4 ? '#ed8936' : '#48bb78'),
+          tension: 0.3, fill: true,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+          y: { min: 1, max: 10, grid: { color: '#f0f0f0' }, ticks: { stepSize: 2 } },
+          x: { grid: { display: false } }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+
+    // Calendar
+    buildCalendar(data);
+
+    // Patterns
+    const pl = document.getElementById('patterns-list');
+    if (data.patterns && data.patterns.length) {
+      pl.innerHTML = data.patterns.map(p => `<li>${p}</li>`).join('');
+    } else {
+      pl.innerHTML = '<li>הוסף אירועים לקבלת דפוסים</li>';
+    }
+  } catch (err) { console.error(err); }
+}
+
+function buildCalendar(data) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const today = now.getDate();
+
+  const anxietyDates = new Set(data.anxiety.map(e => e.date));
+  const winDates = new Set(data.avoidance.filter(a => a.completed).map(e => e.date));
+
+  let html = '';
+  for (let i = 0; i < (firstDay === 0 ? 6 : firstDay - 1); i++) html += '<div class="cal-day"></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const isToday = d === today;
+    const cls = ['cal-day'];
+    if (anxietyDates.has(ds)) cls.push('has-entry');
+    if (winDates.has(ds)) cls.push('has-win');
+    if (isToday) cls.push('today');
+    html += `<div class="${cls.join(' ')}">${d}</div>`;
+  }
+  document.getElementById('calendar').innerHTML = html;
+}
+
+// ─── Settings ─────────────────────────────────────────────────────────────────
+async function saveApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key) return toast('אנא הזן מפתח');
+  await fetch('/api/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key: 'ANTHROPIC_API_KEY', value: key })
+  });
+  toast('מפתח נשמר');
+  document.getElementById('api-key-input').value = '';
+  checkApiStatus();
+}
+
+async function saveProfile() {
+  const name = document.getElementById('profile-name').value;
+  const description = document.getElementById('profile-desc').value;
+  await fetch('/api/profile', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, description })
+  });
+  toast('פרופיל נשמר');
+}
+
+async function loadProfile() {
+  try {
+    const p = await fetch('/api/profile').then(r => r.json());
+    if (p) {
+      document.getElementById('profile-name').value = p.name || '';
+      document.getElementById('profile-desc').value = p.description || '';
+      const files = JSON.parse(p.uploaded_files || '[]');
+      document.getElementById('uploaded-files').innerHTML = files.map(f =>
+        `<span class="file-chip">📄 ${f}</span>`
+      ).join('');
+    }
+  } catch (_) {}
+}
+
+async function uploadFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const form = new FormData();
+  form.append('file', file);
+  const area = document.getElementById('upload-area');
+  area.innerHTML = '<div class="spinner"></div><p style="margin-top:8px;font-size:0.82rem">מעלה...</p>';
+  try {
+    const res = await fetch('/api/upload', { method: 'POST', body: form }).then(r => r.json());
+    if (res.success) {
+      toast(`הקובץ "${res.filename}" הועלה (${res.chars} תווים)`);
+      loadProfile();
+    } else { toast('שגיאה: ' + res.error); }
+  } catch (err) { toast('שגיאה בהעלאה'); }
+  area.innerHTML = `<div class="upload-icon">📁</div><p style="font-size:0.85rem;font-weight:600;margin-bottom:4px">לחץ להעלאת קובץ</p><p style="font-size:0.75rem;color:var(--text-light)">PDF או טקסט, עד 10MB</p>`;
+  input.value = '';
+}
+
+// ─── API status ───────────────────────────────────────────────────────────────
+async function checkApiStatus() {
+  try {
+    const s = await fetch('/api/settings').then(r => r.json());
+    const badge = document.getElementById('api-badge');
+    const warning = document.getElementById('no-api-warning');
+    if (s.hasApiKey) {
+      badge.textContent = 'API מחובר';
+      badge.classList.add('ok');
+      warning.style.display = 'none';
+    } else {
+      badge.textContent = 'הגדר API';
+      badge.classList.remove('ok');
+      warning.style.display = 'block';
+    }
+  } catch (_) {}
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+(async () => {
+  updateIntensity(5);
+  await checkApiStatus();
+  loadProfile();
+  loadValues();
+  loadCrisisHistory();
+})();
+</script>
+</body>
+</html>
