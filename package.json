@@ -4,7 +4,8 @@
   "description": "ACT Anxiety Management App with Claude AI",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "npm rebuild sqlite3"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "latest",
