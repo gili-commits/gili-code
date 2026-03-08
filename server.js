@@ -192,8 +192,6 @@ function requireAuth(req, res, next) {
 (async () => {
   try {
     await migrate();
-    const row = await dbGet('SELECT value FROM settings WHERE key = ?', ['ANTHROPIC_API_KEY']);
-    if (row?.value && !process.env.ANTHROPIC_API_KEY) process.env.ANTHROPIC_API_KEY = row.value;
   } catch (e) { console.error('Startup error:', e); }
 })();
 
@@ -201,7 +199,7 @@ function requireAuth(req, res, next) {
 
 const getClient = () => {
   const key = process.env.ANTHROPIC_API_KEY;
-  if (!key || key === 'your_key_here') throw new Error('מפתח API לא הוגדר — אנא הגדר אותו בהגדרות');
+  if (!key || key === 'your_key_here') throw new Error('מפתח ANTHROPIC_API_KEY לא מוגדר בסביבת השרת');
   return new Anthropic({ apiKey: key });
 };
 
@@ -622,9 +620,7 @@ app.get('/api/settings', async (req, res) => {
   try {
     const rows = await dbAll('SELECT * FROM settings');
     const obj = {};
-    rows.forEach(r => {
-      obj[r.key] = r.key === 'ANTHROPIC_API_KEY' && r.value ? '***' : r.value;
-    });
+    rows.forEach(r => { obj[r.key] = r.value; });
     obj.hasApiKey = !!(process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== 'your_key_here');
     res.json(obj);
   } catch (err) {
@@ -636,8 +632,8 @@ app.get('/api/settings', async (req, res) => {
 app.put('/api/settings', async (req, res) => {
   try {
     const { key, value } = req.body;
+    if (key === 'ANTHROPIC_API_KEY') return res.status(403).json({ error: 'מפתח API מוגדר בסביבת השרת בלבד' });
     await dbRun('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [key, value]);
-    if (key === 'ANTHROPIC_API_KEY') process.env.ANTHROPIC_API_KEY = value;
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
