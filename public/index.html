@@ -795,19 +795,24 @@ input[type="range"]::-webkit-slider-thumb {
 
   <!-- SETTINGS -->
   <div class="section" id="tab-settings">
-    <div class="card">
+    <div class="card" id="api-key-card">
       <div class="card-title">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
         מפתח Anthropic API
       </div>
-      <div class="form-group">
-        <label>API Key</label>
-        <input type="password" id="api-key-input" placeholder="sk-ant-...">
+      <div id="api-key-env-notice" style="display:none;padding:10px;background:rgba(72,187,120,0.15);border-radius:8px;font-size:0.85rem;color:var(--text-light)">
+        ✓ המפתח מוגדר כ-Environment Variable — לא נדרשת פעולה נוספת.
       </div>
-      <button class="btn btn-primary" onclick="saveApiKey()">שמור מפתח</button>
-      <p style="font-size:0.78rem;color:var(--text-light);margin-top:10px;line-height:1.5">
-        המפתח נשמר מקומית במסד הנתונים ולא נשלח לשום מקום.
-      </p>
+      <div id="api-key-form">
+        <div class="form-group">
+          <label>API Key</label>
+          <input type="password" id="api-key-input" placeholder="sk-ant-...">
+        </div>
+        <button class="btn btn-primary" onclick="saveApiKey()">שמור מפתח</button>
+        <p style="font-size:0.78rem;color:var(--text-light);margin-top:10px;line-height:1.5">
+          המפתח נשמר מקומית במסד הנתונים ולא נשלח לשום מקום.
+        </p>
+      </div>
     </div>
 
     <div class="card">
@@ -1475,14 +1480,20 @@ async function checkApiStatus() {
     const s = await fetch('/api/settings').then(r => r.json());
     const badge = document.getElementById('api-badge');
     const warning = document.getElementById('no-api-warning');
+    const envNotice = document.getElementById('api-key-env-notice');
+    const keyForm = document.getElementById('api-key-form');
     if (s.hasApiKey) {
       badge.textContent = 'API מחובר';
       badge.classList.add('ok');
       warning.style.display = 'none';
+      if (envNotice) envNotice.style.display = 'block';
+      if (keyForm) keyForm.style.display = 'none';
     } else {
       badge.textContent = 'הגדר API';
       badge.classList.remove('ok');
       warning.style.display = 'block';
+      if (envNotice) envNotice.style.display = 'none';
+      if (keyForm) keyForm.style.display = 'block';
     }
   } catch (_) {}
 }

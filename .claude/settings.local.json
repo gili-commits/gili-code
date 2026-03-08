@@ -13,7 +13,8 @@
       "Bash(/Users/gili/.nvm/versions/node/v20.20.1/bin/npm install:*)",
       "Bash(/Users/gili/.nvm/versions/node/v20.20.1/bin/node:*)",
       "Bash(PATH=\"/Users/gili/.nvm/versions/node/v20.20.1/bin:$PATH\" /Users/gili/.nvm/versions/node/v20.20.1/bin/node:*)",
-      "Bash(PATH=\"/Users/gili/.nvm/versions/node/v20.20.1/bin:/usr/bin:/bin:/usr/sbin:/sbin\" /Users/gili/.nvm/versions/node/v20.20.1/bin/node:*)"
+      "Bash(PATH=\"/Users/gili/.nvm/versions/node/v20.20.1/bin:/usr/bin:/bin:/usr/sbin:/sbin\" /Users/gili/.nvm/versions/node/v20.20.1/bin/node:*)",
+      "Bash(git rm:*)"
     ]
   }
 }
