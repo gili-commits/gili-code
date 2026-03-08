@@ -373,13 +373,61 @@ input[type="range"]::-webkit-slider-thumb {
 </head>
 <body>
 
+<!-- ─── Auth Overlay ─────────────────────────────────────────────────────── -->
+<div id="auth-overlay" style="position:fixed;inset:0;z-index:1000;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--card);border-radius:var(--radius);padding:32px 28px;max-width:380px;width:100%;box-shadow:var(--shadow)">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:2.2rem;margin-bottom:10px">🧠</div>
+      <h1 style="font-size:1.4rem;font-weight:800;color:var(--primary);margin-bottom:4px">ACT — מלווה נפשי</h1>
+      <p style="font-size:0.8rem;color:var(--text-light)">Acceptance & Commitment Therapy</p>
+    </div>
+
+    <!-- Mode toggle -->
+    <div style="display:flex;background:var(--bg);border-radius:var(--radius-sm);padding:4px;margin-bottom:22px;gap:2px">
+      <button id="auth-login-tab" onclick="switchAuthMode('login')"
+        style="flex:1;padding:9px;border:none;border-radius:8px;font-weight:600;font-size:0.88rem;background:var(--card);color:var(--primary);cursor:pointer;font-family:inherit;transition:all 0.2s">
+        התחברות
+      </button>
+      <button id="auth-register-tab" onclick="switchAuthMode('register')"
+        style="flex:1;padding:9px;border:none;border-radius:8px;font-weight:600;font-size:0.88rem;background:transparent;color:var(--text-light);cursor:pointer;font-family:inherit;transition:all 0.2s">
+        הרשמה
+      </button>
+    </div>
+
+    <div id="auth-error" style="display:none;padding:10px 14px;border-radius:var(--radius-sm);background:#fff5f5;border:1px solid #fed7d7;color:#c53030;font-size:0.85rem;margin-bottom:16px"></div>
+
+    <form id="auth-form" onsubmit="submitAuth();return false">
+      <div class="form-group">
+        <label>שם משתמש</label>
+        <input type="text" id="auth-username" placeholder="בחר שם משתמש" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>סיסמה</label>
+        <input type="password" id="auth-password" placeholder="לפחות 6 תווים" autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primary btn-full" id="auth-submit-btn">התחבר</button>
+    </form>
+
+    <p id="auth-mode-hint" style="text-align:center;font-size:0.78rem;color:var(--text-light);margin-top:16px">
+      אין לך חשבון? <span onclick="switchAuthMode('register')" style="color:var(--primary);cursor:pointer;font-weight:600">הירשם</span>
+    </p>
+  </div>
+</div>
+
+<!-- ─── App Wrapper (hidden until auth) ─────────────────────────────────── -->
+<div id="app-wrapper" style="display:none">
+
 <!-- Header -->
 <div class="header">
   <div>
     <div class="header h1" style="font-size:1.1rem;font-weight:700;color:white;">ACT — מלווה נפשי</div>
     <div style="font-size:0.72rem;opacity:0.8;color:white;">Acceptance & Commitment Therapy</div>
   </div>
-  <div class="api-badge" id="api-badge" onclick="showTab('settings')">טוען...</div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span id="user-display" style="font-size:0.75rem;opacity:0.85;color:white;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    <button onclick="logout()" style="font-size:0.7rem;padding:3px 9px;border-radius:20px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;cursor:pointer;font-family:inherit">יציאה</button>
+    <div class="api-badge" id="api-badge" onclick="showTab('settings')">טוען...</div>
+  </div>
 </div>
 
 <!-- Main -->
@@ -833,8 +881,11 @@ input[type="range"]::-webkit-slider-thumb {
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+</div><!-- /app-wrapper -->
+
 <script>
 // ─── State ──────────────────────────────────────────────────────────────────
+let currentUser = null;
 let breathingActive = false;
 let breathInterval = null;
 let breathTimeout = null;
@@ -1436,13 +1487,102 @@ async function checkApiStatus() {
   } catch (_) {}
 }
 
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+let authMode = 'login';
+
+function switchAuthMode(mode) {
+  authMode = mode;
+  const isLogin = mode === 'login';
+  const loginTab = document.getElementById('auth-login-tab');
+  const registerTab = document.getElementById('auth-register-tab');
+  loginTab.style.background = isLogin ? 'var(--card)' : 'transparent';
+  loginTab.style.color = isLogin ? 'var(--primary)' : 'var(--text-light)';
+  registerTab.style.background = isLogin ? 'transparent' : 'var(--card)';
+  registerTab.style.color = isLogin ? 'var(--text-light)' : 'var(--primary)';
+  document.getElementById('auth-submit-btn').textContent = isLogin ? 'התחבר' : 'הירשם';
+  document.getElementById('auth-mode-hint').innerHTML = isLogin
+    ? 'אין לך חשבון? <span onclick="switchAuthMode(\'register\')" style="color:var(--primary);cursor:pointer;font-weight:600">הירשם</span>'
+    : 'כבר יש לך חשבון? <span onclick="switchAuthMode(\'login\')" style="color:var(--primary);cursor:pointer;font-weight:600">התחבר</span>';
+  document.getElementById('auth-error').style.display = 'none';
+}
+
+async function submitAuth() {
+  const username = document.getElementById('auth-username').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const btn = document.getElementById('auth-submit-btn');
+  const errorEl = document.getElementById('auth-error');
+
+  if (!username || !password) {
+    errorEl.textContent = 'אנא מלא שם משתמש וסיסמה';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'טוען...';
+  errorEl.style.display = 'none';
+
+  try {
+    const url = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errorEl.textContent = data.error || 'שגיאה';
+      errorEl.style.display = 'block';
+      return;
+    }
+    currentUser = data.user;
+    document.getElementById('auth-overlay').style.display = 'none';
+    document.getElementById('app-wrapper').style.display = 'block';
+    initApp();
+  } catch (err) {
+    errorEl.textContent = 'שגיאת חיבור';
+    errorEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+async function logout() {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  currentUser = null;
+  document.getElementById('app-wrapper').style.display = 'none';
+  document.getElementById('auth-overlay').style.display = 'flex';
+  document.getElementById('auth-username').value = '';
+  document.getElementById('auth-password').value = '';
+  switchAuthMode('login');
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
-(async () => {
+function initApp() {
   updateIntensity(5);
-  await checkApiStatus();
+  if (currentUser) document.getElementById('user-display').textContent = currentUser.username;
+  checkApiStatus();
   loadProfile();
   loadValues();
   loadCrisisHistory();
+}
+
+(async () => {
+  try {
+    const res = await fetch('/api/auth/me');
+    if (res.ok) {
+      const data = await res.json();
+      currentUser = data.user;
+      document.getElementById('auth-overlay').style.display = 'none';
+      document.getElementById('app-wrapper').style.display = 'block';
+      initApp();
+    }
+    // If not authenticated, auth-overlay stays visible (shown by default)
+  } catch (_) {
+    // On error, auth-overlay stays visible
+  }
 })();
 </script>
 </body>
