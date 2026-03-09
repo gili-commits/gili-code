@@ -341,6 +341,12 @@ input[type="range"]::-webkit-slider-thumb {
   padding: 4px 10px; border-radius: 20px;
   background: var(--primary-pale); color: var(--primary); font-size: 0.78rem; margin: 3px;
 }
+.file-chip .delete-file {
+  background: none; border: none; cursor: pointer;
+  color: var(--primary); opacity: 0.5; font-size: 1rem; line-height: 1;
+  padding: 0 0 0 2px; margin: 0;
+}
+.file-chip .delete-file:hover { opacity: 1; color: var(--danger); }
 
 /* ── Empty state ── */
 .empty { text-align: center; padding: 40px 20px; color: var(--text-light); }
@@ -1426,10 +1432,19 @@ async function loadProfile() {
       document.getElementById('profile-desc').value = p.description || '';
       const files = JSON.parse(p.uploaded_files || '[]');
       document.getElementById('uploaded-files').innerHTML = files.map(f =>
-        `<span class="file-chip">📄 ${f}</span>`
+        `<span class="file-chip">📄 ${f}<button class="delete-file" onclick="deleteFile('${f.replace(/'/g, "\\'")}')" title="מחק קובץ">×</button></span>`
       ).join('');
     }
   } catch (_) {}
+}
+
+async function deleteFile(filename) {
+  if (!confirm(`למחוק את "${filename}"?`)) return;
+  try {
+    const res = await fetch(`/api/upload/${encodeURIComponent(filename)}`, { method: 'DELETE' }).then(r => r.json());
+    if (res.success) { toast(`הקובץ "${filename}" נמחק`); loadProfile(); }
+    else toast('שגיאה: ' + res.error);
+  } catch { toast('שגיאה במחיקה'); }
 }
 
 async function uploadFile(input) {

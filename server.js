@@ -545,6 +545,26 @@ app.post('/api/upload', requireAuth, upload.single('file'), async (req, res) => 
   }
 });
 
+// DELETE /api/upload/:filename
+app.delete('/api/upload/:filename', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const filename = req.params.filename;
+    const profile = await dbGet('SELECT * FROM user_profile WHERE user_id = $1', [userId]);
+    const files = JSON.parse(profile?.uploaded_files || '[]').filter(f => f !== filename);
+    const escaped = filename.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`\\n\\n--- ${escaped} ---\\n[\\s\\S]*?(?=\\n\\n---|$)`, 'g');
+    const newContents = (profile?.file_contents || '').replace(regex, '');
+    await dbRun(
+      'UPDATE user_profile SET uploaded_files = $1, file_contents = $2 WHERE user_id = $3',
+      [JSON.stringify(files), newContents, userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /api/exercises
 app.get('/api/exercises', (req, res) => {
   res.json([
