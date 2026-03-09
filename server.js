@@ -244,7 +244,7 @@ const SSE = {
   'Access-Control-Allow-Origin': '*'
 };
 
-async function streamClaude(res, systemPrompt, userMessage, maxTokens = 800) {
+async function streamClaude(res, systemPrompt, userMessage, maxTokens = 2000) {
   const client = getClient();
   const stream = client.messages.stream({
     model: 'claude-opus-4-6',
@@ -336,7 +336,7 @@ app.post('/api/anxiety', requireAuth, async (req, res) => {
 
 אנא הגב עם: הכרה ואמפתיה, כלי ACT מותאם לסיטואציה, תרגיל קצר ומיידי, ושאלה אחת לעומק.`;
 
-    const full = await streamClaude(res, sys, msg, 800);
+    const full = await streamClaude(res, sys, msg, 2000);
     const date = new Date().toISOString().split('T')[0];
     await dbRun(
       `INSERT INTO anxiety_entries (user_id, date, intensity, event, thoughts, body, duration, claude_response) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
@@ -366,7 +366,7 @@ app.post('/api/dreams', requireAuth, async (req, res) => {
 3. **עדשת ACT**: מה החלום חושף על ערכים, דפוסי הימנעות, קשיחות קוגניטיבית?
 4. **קישור אישי**: כיצד זה מתחבר לאירועים ורגשות האחרונים שלי?`;
 
-    const full = await streamClaude(res, sys, msg, 1000);
+    const full = await streamClaude(res, sys, msg, 2000);
     const date = new Date().toISOString().split('T')[0];
     const symbolWords = ['מים', 'אש', 'בית', 'דרך', 'ים', 'הר', 'נחש', 'ילד', 'אור', 'חשיכה', 'טיסה', 'נפילה', 'דלת', 'מראה', 'יער', 'בעל חיים'];
     const symbols = symbolWords.filter(s => content.includes(s));
@@ -403,7 +403,7 @@ app.post('/api/avoidance', requireAuth, async (req, res) => {
 2. **מה אני מפסיד**: שאל אותי "מה היית עושה אם החרדה לא הייתה כאן?" — חבר את ההימנעות לערכים שלי
 3. **פרספקטיבה**: הזכר לי שהימנעות מדבר חשוב היא סימן שזה חשוב לי — לא חולשה אלא ראיה לאכפתיות`;
 
-    const full = await streamClaude(res, sys, msg, 600);
+    const full = await streamClaude(res, sys, msg, 2000);
     await dbRun(`UPDATE avoidance_entries SET claude_response = $1 WHERE id = $2`, [full, entryId]);
     res.write(`data: ${JSON.stringify({ id: entryId, done: true })}\n\n`);
     res.write(`data: [DONE]\n\n`);
@@ -601,7 +601,7 @@ app.post('/api/values/feedback', requireAuth, async (req, res) => {
 
     const msg = `הנה מפת הערכים שלי:\n${valuesText}\n\nאנא תן פידבק ממוקד על הפערים הגדולים ביותר בין מה שחשוב לי לבין כמה אני חי לפיו. מה צעד אחד קטן שאוכל לקחת השבוע עבור הערך עם הפער הגדול ביותר?`;
 
-    await streamClaude(res, sys, msg, 800);
+    await streamClaude(res, sys, msg, 2000);
     res.write(`data: [DONE]\n\n`);
   } catch (err) {
     res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
