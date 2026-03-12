@@ -413,6 +413,32 @@ app.post('/api/avoidance', requireAuth, async (req, res) => {
   res.end();
 });
 
+// POST /api/chat — conversational follow-up
+app.post('/api/chat', requireAuth, async (req, res) => {
+  res.set(SSE);
+  const { messages } = req.body; // [{role:'user'|'assistant', content:string}]
+  const userId = req.session.userId;
+  try {
+    const sys = await buildSystemPrompt(userId);
+    const client = getClient();
+    const stream = client.messages.stream({
+      model: 'claude-opus-4-6',
+      max_tokens: 2000,
+      system: sys,
+      messages
+    });
+    for await (const evt of stream) {
+      if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
+        res.write(`data: ${JSON.stringify({ text: evt.delta.text })}\n\n`);
+      }
+    }
+    res.write(`data: [DONE]\n\n`);
+  } catch (err) {
+    res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+  }
+  res.end();
+});
+
 // PUT /api/avoidance/:id
 app.put('/api/avoidance/:id', requireAuth, async (req, res) => {
   try {

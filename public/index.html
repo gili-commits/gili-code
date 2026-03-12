@@ -370,6 +370,50 @@ input[type="range"]::-webkit-slider-thumb {
 }
 .toast.show { opacity: 1; }
 
+/* ── Chat ── */
+.chat-container {
+  background: var(--card); border-radius: var(--radius);
+  box-shadow: var(--shadow-sm); margin-top: 14px; overflow: hidden;
+}
+.chat-header {
+  background: var(--primary); color: white;
+  padding: 10px 16px; display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.85rem; font-weight: 600;
+}
+.chat-header-close {
+  background: none; border: none; color: white; font-size: 1.2rem;
+  cursor: pointer; opacity: 0.7; line-height: 1; padding: 0 2px;
+}
+.chat-header-close:hover { opacity: 1; }
+.chat-messages {
+  padding: 12px; max-height: 320px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.chat-msg {
+  max-width: 88%; padding: 10px 14px; border-radius: 16px;
+  font-size: 0.88rem; line-height: 1.6; white-space: pre-wrap;
+}
+.chat-msg.user {
+  background: var(--primary); color: white;
+  align-self: flex-end; border-bottom-right-radius: 4px;
+}
+.chat-msg.assistant {
+  background: linear-gradient(135deg, #f0f4ff 0%, #e8f5e9 100%);
+  border: 1px solid #c3dafe; color: var(--text);
+  align-self: flex-start; border-bottom-left-radius: 4px;
+}
+.chat-msg.assistant.loading::after {
+  content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--primary); margin-right: 4px; animation: blink 1s infinite;
+}
+.chat-input-area {
+  padding: 10px 12px; border-top: 1px solid var(--border);
+  display: flex; gap: 8px; align-items: flex-end;
+}
+.chat-input-area textarea {
+  flex: 1; resize: none; font-size: 0.88rem; min-height: 38px; max-height: 90px;
+}
+
 /* ── Responsive ── */
 @media (max-width: 380px) {
   .main { padding: 12px 12px calc(var(--nav) + 16px); }
@@ -490,6 +534,19 @@ input[type="range"]::-webkit-slider-thumb {
       <div class="claude-box" id="crisis-response"></div>
     </div>
 
+    <div id="crisis-chat" class="chat-container" style="display:none">
+      <div class="chat-header">
+        <span>💬 המשך שיחה עם Claude</span>
+        <button class="chat-header-close" onclick="closeChatBox('crisis')">×</button>
+      </div>
+      <div class="chat-messages" id="crisis-chat-messages"></div>
+      <div class="chat-input-area">
+        <textarea id="crisis-chat-input" placeholder="שאל שאלה, שתף מחשבה..." rows="2"
+          onkeydown="chatKeydown(event,'crisis')"></textarea>
+        <button class="btn btn-primary btn-sm" onclick="sendChatMessage('crisis')">שלח</button>
+      </div>
+    </div>
+
     <div class="card" id="crisis-history-card" style="display:none">
       <div class="card-title" style="margin-bottom:10px">אירועי חרדה אחרונים</div>
       <div id="crisis-history"></div>
@@ -521,6 +578,19 @@ input[type="range"]::-webkit-slider-thumb {
         פרשנות ACT + יונג
       </div>
       <div class="claude-box" id="dream-response"></div>
+    </div>
+
+    <div id="dreams-chat" class="chat-container" style="display:none">
+      <div class="chat-header">
+        <span>💬 המשך שיחה על החלום</span>
+        <button class="chat-header-close" onclick="closeChatBox('dreams')">×</button>
+      </div>
+      <div class="chat-messages" id="dreams-chat-messages"></div>
+      <div class="chat-input-area">
+        <textarea id="dreams-chat-input" placeholder="שאל על החלום, הוסף פרטים..." rows="2"
+          onkeydown="chatKeydown(event,'dreams')"></textarea>
+        <button class="btn btn-primary btn-sm" onclick="sendChatMessage('dreams')">שלח</button>
+      </div>
     </div>
 
     <div class="card" id="dream-history-card" style="display:none">
@@ -558,6 +628,19 @@ input[type="range"]::-webkit-slider-thumb {
           ✓ עשיתי את הצעד!
         </button>
         <button class="btn btn-ghost btn-sm" onclick="resetAvoidanceForm()">חדש</button>
+      </div>
+    </div>
+
+    <div id="avoidance-chat" class="chat-container" style="display:none">
+      <div class="chat-header">
+        <span>💬 המשך שיחה על ההימנעות</span>
+        <button class="chat-header-close" onclick="closeChatBox('avoidance')">×</button>
+      </div>
+      <div class="chat-messages" id="avoidance-chat-messages"></div>
+      <div class="chat-input-area">
+        <textarea id="avoidance-chat-input" placeholder="שאל שאלה, שתף מה קרה..." rows="2"
+          onkeydown="chatKeydown(event,'avoidance')"></textarea>
+        <button class="btn btn-primary btn-sm" onclick="sendChatMessage('avoidance')">שלח</button>
       </div>
     </div>
 
@@ -995,16 +1078,29 @@ document.getElementById('crisis-form').addEventListener('submit', async (e) => {
   wrap.style.display = 'block';
   wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+  const crisisIntensity = document.getElementById('intensity').value;
+  const crisisEvent = document.getElementById('crisis-event').value;
+  const crisisThoughts = document.getElementById('crisis-thoughts').value;
+  const crisisBody = document.getElementById('crisis-body').value;
+  const crisisDuration = document.getElementById('crisis-duration').value;
+
+  document.getElementById('crisis-chat').style.display = 'none';
+
   await streamResponse('/api/anxiety', {
-    intensity: document.getElementById('intensity').value,
-    event: document.getElementById('crisis-event').value,
-    thoughts: document.getElementById('crisis-thoughts').value,
-    body: document.getElementById('crisis-body').value,
-    duration: document.getElementById('crisis-duration').value
+    intensity: crisisIntensity,
+    event: crisisEvent,
+    thoughts: crisisThoughts,
+    body: crisisBody,
+    duration: crisisDuration
   }, document.getElementById('crisis-response'), () => {
     btn.disabled = false;
     btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg> שלח לקבלת עזרה';
     loadCrisisHistory();
+    const claudeResponse = document.getElementById('crisis-response').textContent;
+    if (claudeResponse) {
+      const originalMsg = `אני חווה חרדה עכשיו.\n\nעוצמה: ${crisisIntensity}/10\nמה קרה: ${crisisEvent || 'לא פורט'}\nמחשבות: ${crisisThoughts || 'לא פורט'}\nתחושות גוף: ${crisisBody || 'לא פורט'}\nמשך הזמן: ${crisisDuration || 'לא פורט'}`;
+      initChatContext('crisis', originalMsg, claudeResponse);
+    }
   });
 });
 
@@ -1040,11 +1136,17 @@ document.getElementById('dream-form').addEventListener('submit', async (e) => {
   wrap.style.display = 'block';
   wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+  document.getElementById('dreams-chat').style.display = 'none';
+
   await streamResponse('/api/dreams', { content },
     document.getElementById('dream-response'), () => {
       btn.disabled = false;
       btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> פרש את החלום';
       loadDreamHistory();
+      const claudeResponse = document.getElementById('dream-response').textContent;
+      if (claudeResponse) {
+        initChatContext('dreams', `פרש את החלום הבא:\n"${content}"`, claudeResponse);
+      }
     });
 });
 
@@ -1080,11 +1182,17 @@ document.getElementById('avoidance-form').addEventListener('submit', async (e) =
   wrap.style.display = 'block';
   currentAvoidanceId = null;
 
+  document.getElementById('avoidance-chat').style.display = 'none';
+
   await streamResponse('/api/avoidance', { description: desc },
     document.getElementById('avoidance-response'), (result) => {
       if (result && result.id) currentAvoidanceId = result.id;
       btn.disabled = false;
       btn.textContent = 'מצא לי צעד קטן';
+      const claudeResponse = document.getElementById('avoidance-response').textContent;
+      if (claudeResponse) {
+        initChatContext('avoidance', `אני נמנע מ: "${desc}"`, claudeResponse);
+      }
     });
 });
 
@@ -1110,12 +1218,14 @@ async function markAvoidanceDone() {
 
 function resetAvoidanceForm() {
   document.getElementById('avoidance-response-wrap').style.display = 'none';
+  document.getElementById('avoidance-chat').style.display = 'none';
   document.getElementById('avoidance-desc').value = '';
   document.getElementById('avoidance-response').textContent = '';
   document.getElementById('mark-done-btn').disabled = false;
   document.getElementById('mark-done-btn').textContent = '✓ עשיתי את הצעד!';
   document.getElementById('mark-done-btn').style.background = 'var(--green)';
   currentAvoidanceId = null;
+  delete chatState['avoidance'];
 }
 
 async function loadAvoidance() {
@@ -1564,6 +1674,103 @@ async function logout() {
   document.getElementById('auth-username').value = '';
   document.getElementById('auth-password').value = '';
   switchAuthMode('login');
+}
+
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+const chatState = {};
+
+function initChatContext(contextId, originalUserMsg, claudeResponse) {
+  chatState[contextId] = {
+    messages: [
+      { role: 'user', content: originalUserMsg },
+      { role: 'assistant', content: claudeResponse }
+    ]
+  };
+  const messagesEl = document.getElementById(contextId + '-chat-messages');
+  messagesEl.innerHTML = '';
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-msg assistant';
+  bubble.textContent = claudeResponse;
+  messagesEl.appendChild(bubble);
+  const container = document.getElementById(contextId + '-chat');
+  container.style.display = 'block';
+  container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeChatBox(contextId) {
+  document.getElementById(contextId + '-chat').style.display = 'none';
+  delete chatState[contextId];
+}
+
+function chatKeydown(e, contextId) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(contextId); }
+}
+
+async function sendChatMessage(contextId) {
+  const inputEl = document.getElementById(contextId + '-chat-input');
+  const text = inputEl.value.trim();
+  if (!text || !chatState[contextId]) return;
+
+  const messagesEl = document.getElementById(contextId + '-chat-messages');
+
+  const userBubble = document.createElement('div');
+  userBubble.className = 'chat-msg user';
+  userBubble.textContent = text;
+  messagesEl.appendChild(userBubble);
+
+  chatState[contextId].messages.push({ role: 'user', content: text });
+  inputEl.value = '';
+  inputEl.disabled = true;
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  const assistantBubble = document.createElement('div');
+  assistantBubble.className = 'chat-msg assistant loading';
+  messagesEl.appendChild(assistantBubble);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  let fullResponse = '';
+  try {
+    const resp = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: chatState[contextId].messages })
+    });
+    if (!resp.ok) throw new Error('שגיאת שרת: ' + resp.status);
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (raw === '[DONE]') {
+          assistantBubble.classList.remove('loading');
+          chatState[contextId].messages.push({ role: 'assistant', content: fullResponse });
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+          inputEl.disabled = false;
+          inputEl.focus();
+          return;
+        }
+        try {
+          const data = JSON.parse(raw);
+          if (data.error) { assistantBubble.textContent = 'שגיאה: ' + data.error; assistantBubble.classList.remove('loading'); inputEl.disabled = false; return; }
+          if (data.text) { fullResponse += data.text; assistantBubble.textContent = fullResponse; messagesEl.scrollTop = messagesEl.scrollHeight; }
+        } catch (_) {}
+      }
+    }
+    assistantBubble.classList.remove('loading');
+    inputEl.disabled = false;
+  } catch (err) {
+    assistantBubble.textContent = 'שגיאה: ' + err.message;
+    assistantBubble.classList.remove('loading');
+    inputEl.disabled = false;
+  }
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
