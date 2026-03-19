@@ -15,7 +15,11 @@
       "Bash(PATH=\"/Users/gili/.nvm/versions/node/v20.20.1/bin:$PATH\" /Users/gili/.nvm/versions/node/v20.20.1/bin/node:*)",
       "Bash(PATH=\"/Users/gili/.nvm/versions/node/v20.20.1/bin:/usr/bin:/bin:/usr/sbin:/sbin\" /Users/gili/.nvm/versions/node/v20.20.1/bin/node:*)",
       "Bash(git rm:*)",
-      "Bash(node20 --check server.js 2>&1 || node18 --check server.js 2>&1 || echo \"Node version issue - checking file manually\")"
+      "Bash(node20 --check server.js 2>&1 || node18 --check server.js 2>&1 || echo \"Node version issue - checking file manually\")",
+      "Bash(npm --version)",
+      "Bash(~/.nvm/versions/node/v20.20.1/bin/npm install:*)",
+      "Bash(~/.nvm/versions/node/v20.20.1/bin/node --version)",
+      "Bash(~/.nvm/versions/node/v20.20.1/bin/node ~/.nvm/versions/node/v20.20.1/lib/node_modules/npm/bin/npm-cli.js install crypto-js)"
     ]
   }
 }

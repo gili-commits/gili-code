@@ -8,6 +8,28 @@ const fs = require('fs');
 const Anthropic = require('@anthropic-ai/sdk');
 const bcrypt = require('bcrypt');
 const session = require('express-session');
+const CryptoJS = require('crypto-js');
+
+// ─── Encryption ───────────────────────────────────────────────────────────────
+
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '';
+if (!ENCRYPTION_KEY) console.warn('⚠️  ENCRYPTION_KEY לא מוגדר — נתונים נשמרים ללא הצפנה');
+
+function encrypt(text) {
+  if (!text || !ENCRYPTION_KEY) return text || '';
+  return CryptoJS.AES.encrypt(String(text), ENCRYPTION_KEY).toString();
+}
+
+function decrypt(ciphertext) {
+  if (!ciphertext || !ENCRYPTION_KEY) return ciphertext || '';
+  try {
+    const bytes = CryptoJS.AES.decrypt(ciphertext, ENCRYPTION_KEY);
+    const result = bytes.toString(CryptoJS.enc.Utf8);
+    return result || ciphertext; // fallback לנתונים ישנים לא מוצפנים
+  } catch {
+    return ciphertext; // fallback לנתונים ישנים לא מוצפנים
+  }
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -209,8 +231,8 @@ const buildSystemPrompt = async (userId) => {
   );
 
   const history = [
-    ...anxietyRows.map(r => `  • חרדה (${r.date}): עצמה ${r.intensity}/10 — ${(r.event || '').slice(0, 80)}`),
-    ...dreamRows.map(r => `  • חלום (${r.date}): ${(r.content || '').slice(0, 80)}`)
+    ...anxietyRows.map(r => `  • חרדה (${r.date}): עצמה ${r.intensity}/10 — ${(decrypt(r.event) || '').slice(0, 80)}`),
+    ...dreamRows.map(r => `  • חלום (${r.date}): ${(decrypt(r.content) || '').slice(0, 80)}`)
   ].join('\n') || '  אין היסטוריה עדיין';
 
   return `אתה מלווה נפשי אישי שמשתמש בגישת ACT (Acceptance and Commitment Therapy) ובפסיכולוגיה יונגיאנית לפרשנות חלומות.
@@ -230,8 +252,8 @@ const buildSystemPrompt = async (userId) => {
 
 מידע על המשתמש:
 שם: ${profile.name || 'לא ידוע'}
-תיאור עצמי: ${profile.description || 'לא סופק עדיין'}
-${profile.file_contents ? `\nתוכן קבצים אישיים שהועלו:\n${profile.file_contents.slice(0, 2000)}` : ''}
+תיאור עצמי: ${decrypt(profile.description) || 'לא סופק עדיין'}
+${profile.file_contents ? `\nתוכן קבצים אישיים שהועלו:\n${decrypt(profile.file_contents).slice(0, 2000)}` : ''}
 
 אירועים אחרונים:
 ${history}`;
@@ -340,7 +362,7 @@ app.post('/api/anxiety', requireAuth, async (req, res) => {
     const date = new Date().toISOString().split('T')[0];
     await dbRun(
       `INSERT INTO anxiety_entries (user_id, date, intensity, event, thoughts, body, duration, claude_response) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [userId, date, intensity, event, thoughts, body, duration, full]
+      [userId, date, intensity, encrypt(event), encrypt(thoughts), encrypt(body), encrypt(duration), encrypt(full)]
     );
     res.write(`data: [DONE]\n\n`);
   } catch (err) {
@@ -372,7 +394,7 @@ app.post('/api/dreams', requireAuth, async (req, res) => {
     const symbols = symbolWords.filter(s => content.includes(s));
     await dbRun(
       `INSERT INTO dream_entries (user_id, date, content, symbols, claude_interpretation) VALUES ($1, $2, $3, $4, $5)`,
-      [userId, date, content, JSON.stringify(symbols), full]
+      [userId, date, encrypt(content), encrypt(JSON.stringify(symbols)), encrypt(full)]
     );
     res.write(`data: [DONE]\n\n`);
   } catch (err) {
@@ -391,7 +413,7 @@ app.post('/api/avoidance', requireAuth, async (req, res) => {
     const date = new Date().toISOString().split('T')[0];
     const result = await dbGet(
       `INSERT INTO avoidance_entries (user_id, date, description) VALUES ($1, $2, $3) RETURNING id`,
-      [userId, date, description]
+      [userId, date, encrypt(description)]
     );
     entryId = result.id;
 
@@ -404,7 +426,7 @@ app.post('/api/avoidance', requireAuth, async (req, res) => {
 3. **פרספקטיבה**: הזכר לי שהימנעות מדבר חשוב היא סימן שזה חשוב לי — לא חולשה אלא ראיה לאכפתיות`;
 
     const full = await streamClaude(res, sys, msg, 2000);
-    await dbRun(`UPDATE avoidance_entries SET claude_response = $1 WHERE id = $2`, [full, entryId]);
+    await dbRun(`UPDATE avoidance_entries SET claude_response = $1 WHERE id = $2`, [encrypt(full), entryId]);
     res.write(`data: ${JSON.stringify({ id: entryId, done: true })}\n\n`);
     res.write(`data: [DONE]\n\n`);
   } catch (err) {
@@ -445,7 +467,7 @@ app.put('/api/avoidance/:id', requireAuth, async (req, res) => {
     const { completed, small_step, what_i_miss } = req.body;
     await dbRun(
       `UPDATE avoidance_entries SET completed = $1, small_step = COALESCE(NULLIF($2, ''), small_step), what_i_miss = COALESCE(NULLIF($3, ''), what_i_miss) WHERE id = $4 AND user_id = $5`,
-      [completed ? 1 : 0, small_step || '', what_i_miss || '', req.params.id, req.session.userId]
+      [completed ? 1 : 0, encrypt(small_step || ''), encrypt(what_i_miss || ''), req.params.id, req.session.userId]
     );
     res.json({ success: true });
   } catch (err) {
@@ -456,7 +478,14 @@ app.put('/api/avoidance/:id', requireAuth, async (req, res) => {
 // GET /api/avoidance
 app.get('/api/avoidance', requireAuth, async (req, res) => {
   try {
-    res.json(await dbAll('SELECT * FROM avoidance_entries WHERE user_id = $1 ORDER BY created_at DESC', [req.session.userId]));
+    const rows = await dbAll('SELECT * FROM avoidance_entries WHERE user_id = $1 ORDER BY created_at DESC', [req.session.userId]);
+    res.json(rows.map(r => ({
+      ...r,
+      description: decrypt(r.description),
+      claude_response: decrypt(r.claude_response),
+      small_step: decrypt(r.small_step),
+      what_i_miss: decrypt(r.what_i_miss)
+    })));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -465,7 +494,14 @@ app.get('/api/avoidance', requireAuth, async (req, res) => {
 // GET /api/avoidance/wins
 app.get('/api/avoidance/wins', requireAuth, async (req, res) => {
   try {
-    res.json(await dbAll('SELECT * FROM avoidance_entries WHERE user_id = $1 AND completed = 1 ORDER BY created_at DESC', [req.session.userId]));
+    const rows = await dbAll('SELECT * FROM avoidance_entries WHERE user_id = $1 AND completed = 1 ORDER BY created_at DESC', [req.session.userId]);
+    res.json(rows.map(r => ({
+      ...r,
+      description: decrypt(r.description),
+      claude_response: decrypt(r.claude_response),
+      small_step: decrypt(r.small_step),
+      what_i_miss: decrypt(r.what_i_miss)
+    })));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -475,8 +511,22 @@ app.get('/api/avoidance/wins', requireAuth, async (req, res) => {
 app.get('/api/entries', requireAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
-    const anxiety = await dbAll('SELECT * FROM anxiety_entries WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', [userId]);
-    const dreams = await dbAll('SELECT * FROM dream_entries WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20', [userId]);
+    const anxietyRaw = await dbAll('SELECT * FROM anxiety_entries WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', [userId]);
+    const dreamsRaw = await dbAll('SELECT * FROM dream_entries WHERE user_id = $1 ORDER BY created_at DESC LIMIT 20', [userId]);
+    const anxiety = anxietyRaw.map(r => ({
+      ...r,
+      event: decrypt(r.event),
+      thoughts: decrypt(r.thoughts),
+      body: decrypt(r.body),
+      duration: decrypt(r.duration),
+      claude_response: decrypt(r.claude_response)
+    }));
+    const dreams = dreamsRaw.map(r => ({
+      ...r,
+      content: decrypt(r.content),
+      symbols: decrypt(r.symbols),
+      claude_interpretation: decrypt(r.claude_interpretation)
+    }));
     res.json({ anxiety, dreams });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -515,7 +565,12 @@ app.get('/api/dashboard', requireAuth, async (req, res) => {
 // GET /api/profile
 app.get('/api/profile', requireAuth, async (req, res) => {
   try {
-    res.json(await dbGet('SELECT * FROM user_profile WHERE user_id = $1', [req.session.userId]));
+    const profile = await dbGet('SELECT * FROM user_profile WHERE user_id = $1', [req.session.userId]);
+    if (profile) {
+      profile.description = decrypt(profile.description);
+      profile.file_contents = decrypt(profile.file_contents);
+    }
+    res.json(profile);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -525,7 +580,7 @@ app.get('/api/profile', requireAuth, async (req, res) => {
 app.put('/api/profile', requireAuth, async (req, res) => {
   try {
     const { name, description } = req.body;
-    await dbRun('UPDATE user_profile SET name = $1, description = $2 WHERE user_id = $3', [name, description, req.session.userId]);
+    await dbRun('UPDATE user_profile SET name = $1, description = $2 WHERE user_id = $3', [name, encrypt(description), req.session.userId]);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -555,12 +610,12 @@ app.post('/api/upload', requireAuth, upload.single('file'), async (req, res) => 
     const files = JSON.parse(profile?.uploaded_files || '[]');
     files.push(req.file.originalname);
 
-    const existing = profile?.file_contents || '';
+    const existing = decrypt(profile?.file_contents || '');
     const newContent = (existing + `\n\n--- ${req.file.originalname} ---\n${text.slice(0, 3000)}`).slice(0, 10000);
 
     await dbRun(
       'UPDATE user_profile SET uploaded_files = $1, file_contents = $2 WHERE user_id = $3',
-      [JSON.stringify(files), newContent, userId]
+      [JSON.stringify(files), encrypt(newContent), userId]
     );
 
     fs.unlinkSync(filePath);
@@ -580,10 +635,10 @@ app.delete('/api/upload/:filename', requireAuth, async (req, res) => {
     const files = JSON.parse(profile?.uploaded_files || '[]').filter(f => f !== filename);
     const escaped = filename.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`\\n\\n--- ${escaped} ---\\n[\\s\\S]*?(?=\\n\\n---|$)`, 'g');
-    const newContents = (profile?.file_contents || '').replace(regex, '');
+    const newContents = decrypt(profile?.file_contents || '').replace(regex, '');
     await dbRun(
       'UPDATE user_profile SET uploaded_files = $1, file_contents = $2 WHERE user_id = $3',
-      [JSON.stringify(files), newContents, userId]
+      [JSON.stringify(files), encrypt(newContents), userId]
     );
     res.json({ success: true });
   } catch (err) {
@@ -611,12 +666,12 @@ app.post('/api/values', requireAuth, async (req, res) => {
       if (exists) {
         await dbRun(
           'UPDATE values_map SET description = $1, score = $2, updated_at = CURRENT_TIMESTAMP WHERE domain = $3 AND user_id = $4',
-          [v.description, v.score, v.domain, userId]
+          [encrypt(v.description), v.score, v.domain, userId]
         );
       } else {
         await dbRun(
           'INSERT INTO values_map (user_id, domain, description, score) VALUES ($1, $2, $3, $4)',
-          [userId, v.domain, v.description, v.score]
+          [userId, v.domain, encrypt(v.description), v.score]
         );
       }
     }
@@ -629,7 +684,8 @@ app.post('/api/values', requireAuth, async (req, res) => {
 // GET /api/values
 app.get('/api/values', requireAuth, async (req, res) => {
   try {
-    res.json(await dbAll('SELECT * FROM values_map WHERE user_id = $1', [req.session.userId]));
+    const values = await dbAll('SELECT * FROM values_map WHERE user_id = $1', [req.session.userId]);
+    res.json(values.map(v => ({ ...v, description: decrypt(v.description) })));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -677,6 +733,50 @@ app.put('/api/settings', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Temporary Migration Endpoint (DELETE AFTER USE) ─────────────────────────
+// גש ל: /run-migration?secret=<ENCRYPTION_KEY> כדי להצפין נתונים קיימים
+
+app.get('/run-migration', async (req, res) => {
+  if (!ENCRYPTION_KEY || req.query.secret !== ENCRYPTION_KEY) {
+    return res.status(403).json({ error: 'גישה נדחתה' });
+  }
+
+  function isEncrypted(value) {
+    return typeof value === 'string' && value.startsWith('U2FsdGVkX1');
+  }
+
+  function encryptIfNeeded(text) {
+    if (!text || isEncrypted(text)) return text || '';
+    return CryptoJS.AES.encrypt(String(text), ENCRYPTION_KEY).toString();
+  }
+
+  async function migrateTable(tableName, fields, idField = 'id') {
+    const rows = (await pool.query(`SELECT * FROM ${tableName}`)).rows;
+    let updated = 0, skipped = 0;
+    for (const row of rows) {
+      if (fields.every(f => !row[f] || isEncrypted(row[f]))) { skipped++; continue; }
+      const setClauses = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
+      const values = [...fields.map(f => encryptIfNeeded(row[f])), row[idField]];
+      await pool.query(`UPDATE ${tableName} SET ${setClauses} WHERE ${idField} = $${fields.length + 1}`, values);
+      updated++;
+    }
+    return { table: tableName, updated, skipped };
+  }
+
+  try {
+    const results = await Promise.all([
+      migrateTable('anxiety_entries',  ['event', 'thoughts', 'body', 'duration', 'claude_response']),
+      migrateTable('dream_entries',    ['content', 'symbols', 'claude_interpretation']),
+      migrateTable('avoidance_entries',['description', 'claude_response', 'small_step', 'what_i_miss']),
+      migrateTable('values_map',       ['description']),
+      migrateTable('user_profile',     ['description', 'file_contents'], 'user_id'),
+    ]);
+    res.json({ success: true, results });
+  } catch (err) {
+    res.status(500).json({ error: err.message, stack: err.stack });
   }
 });
 
