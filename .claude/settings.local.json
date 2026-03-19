@@ -19,7 +19,10 @@
       "Bash(npm --version)",
       "Bash(~/.nvm/versions/node/v20.20.1/bin/npm install:*)",
       "Bash(~/.nvm/versions/node/v20.20.1/bin/node --version)",
-      "Bash(~/.nvm/versions/node/v20.20.1/bin/node ~/.nvm/versions/node/v20.20.1/lib/node_modules/npm/bin/npm-cli.js install crypto-js)"
+      "Bash(~/.nvm/versions/node/v20.20.1/bin/node ~/.nvm/versions/node/v20.20.1/lib/node_modules/npm/bin/npm-cli.js install crypto-js)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }

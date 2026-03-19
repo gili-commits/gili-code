@@ -736,50 +736,6 @@ app.put('/api/settings', async (req, res) => {
   }
 });
 
-// ─── Temporary Migration Endpoint (DELETE AFTER USE) ─────────────────────────
-// גש ל: /run-migration?secret=<ENCRYPTION_KEY> כדי להצפין נתונים קיימים
-
-app.get('/run-migration', async (req, res) => {
-  if (!ENCRYPTION_KEY || req.query.secret !== ENCRYPTION_KEY) {
-    return res.status(403).json({ error: 'גישה נדחתה' });
-  }
-
-  function isEncrypted(value) {
-    return typeof value === 'string' && value.startsWith('U2FsdGVkX1');
-  }
-
-  function encryptIfNeeded(text) {
-    if (!text || isEncrypted(text)) return text || '';
-    return CryptoJS.AES.encrypt(String(text), ENCRYPTION_KEY).toString();
-  }
-
-  async function migrateTable(tableName, fields, idField = 'id') {
-    const rows = (await pool.query(`SELECT * FROM ${tableName}`)).rows;
-    let updated = 0, skipped = 0;
-    for (const row of rows) {
-      if (fields.every(f => !row[f] || isEncrypted(row[f]))) { skipped++; continue; }
-      const setClauses = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
-      const values = [...fields.map(f => encryptIfNeeded(row[f])), row[idField]];
-      await pool.query(`UPDATE ${tableName} SET ${setClauses} WHERE ${idField} = $${fields.length + 1}`, values);
-      updated++;
-    }
-    return { table: tableName, updated, skipped };
-  }
-
-  try {
-    const results = await Promise.all([
-      migrateTable('anxiety_entries',  ['event', 'thoughts', 'body', 'duration', 'claude_response']),
-      migrateTable('dream_entries',    ['content', 'symbols', 'claude_interpretation']),
-      migrateTable('avoidance_entries',['description', 'claude_response', 'small_step', 'what_i_miss']),
-      migrateTable('values_map',       ['description']),
-      migrateTable('user_profile',     ['description', 'file_contents'], 'user_id'),
-    ]);
-    res.json({ success: true, results });
-  } catch (err) {
-    res.status(500).json({ error: err.message, stack: err.stack });
-  }
-});
-
 // ─── Start ────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
