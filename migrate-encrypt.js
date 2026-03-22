@@ -88,6 +88,9 @@ async function run() {
     await migrateTable('user_profile',
       ['description', 'file_contents'], 'user_id');
 
+    await migrateTable('free_consult_chat',
+      ['messages'], 'user_id');
+
     console.log('\n✅  מיגרציה הושלמה בהצלחה!');
   } catch (err) {
     console.error('\n❌  שגיאה במיגרציה:');

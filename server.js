@@ -179,6 +179,12 @@ async function initDB() {
     claude_response TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`);
+
+  await pool.query(`CREATE TABLE IF NOT EXISTS free_consult_chat (
+    user_id INTEGER PRIMARY KEY,
+    messages TEXT DEFAULT '',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
 }
 
 // ─── Migration ────────────────────────────────────────────────────────────────
@@ -218,6 +224,8 @@ const getClient = () => {
   if (!key || key === 'your_key_here') throw new Error('מפתח ANTHROPIC_API_KEY לא מוגדר בסביבת השרת');
   return new Anthropic({ apiKey: key });
 };
+
+const FREE_CONSULT_SYSTEM = `אתה מטפל ACT (Acceptance and Commitment Therapy) מנוסה, אמפתי ולא שיפוטי. אתה מקשיב, מבין, ומשלב בטבעיות עקרונות ACT כמו קבלה, נוכחות, ערכים ומחויבות — אבל לא בצורה נוקשה או תיאורטית. המשתמש יכול לדבר על כל נושא.`;
 
 const buildSystemPrompt = async (userId) => {
   const profile = await dbGet('SELECT * FROM user_profile WHERE user_id = $1', [userId]) || {};
@@ -428,6 +436,69 @@ app.post('/api/avoidance', requireAuth, async (req, res) => {
     const full = await streamClaude(res, sys, msg, 2000);
     await dbRun(`UPDATE avoidance_entries SET claude_response = $1 WHERE id = $2`, [encrypt(full), entryId]);
     res.write(`data: ${JSON.stringify({ id: entryId, done: true })}\n\n`);
+    res.write(`data: [DONE]\n\n`);
+  } catch (err) {
+    res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+  }
+  res.end();
+});
+
+// GET /api/free-consult — persisted free-form ACT chat history
+app.get('/api/free-consult', requireAuth, async (req, res) => {
+  try {
+    const row = await dbGet('SELECT messages FROM free_consult_chat WHERE user_id = $1', [req.session.userId]);
+    if (!row || !row.messages) return res.json({ messages: [] });
+    try {
+      const parsed = JSON.parse(decrypt(row.messages));
+      res.json({ messages: Array.isArray(parsed) ? parsed : [] });
+    } catch {
+      res.json({ messages: [] });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/free-consult/chat — streaming; saves full thread after completion
+app.post('/api/free-consult/chat', requireAuth, async (req, res) => {
+  res.set(SSE);
+  const { messages } = req.body;
+  const userId = req.session.userId;
+  if (!Array.isArray(messages) || messages.length === 0) {
+    res.write(`data: ${JSON.stringify({ error: 'הודעות חסרות' })}\n\n`);
+    res.end();
+    return;
+  }
+  const trimmed = messages.slice(-60).map(m => ({
+    role: m.role === 'assistant' ? 'assistant' : 'user',
+    content: String(m.content || '').slice(0, 32000)
+  })).filter(m => m.content);
+  if (!trimmed.length) {
+    res.write(`data: ${JSON.stringify({ error: 'אין תוכן להודעה' })}\n\n`);
+    res.end();
+    return;
+  }
+  try {
+    const client = getClient();
+    const stream = client.messages.stream({
+      model: 'claude-opus-4-6',
+      max_tokens: 2000,
+      system: FREE_CONSULT_SYSTEM,
+      messages: trimmed
+    });
+    let full = '';
+    for await (const evt of stream) {
+      if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
+        full += evt.delta.text;
+        res.write(`data: ${JSON.stringify({ text: evt.delta.text })}\n\n`);
+      }
+    }
+    const toSave = [...trimmed, { role: 'assistant', content: full }];
+    await dbRun(
+      `INSERT INTO free_consult_chat (user_id, messages, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
+       ON CONFLICT (user_id) DO UPDATE SET messages = EXCLUDED.messages, updated_at = CURRENT_TIMESTAMP`,
+      [userId, encrypt(JSON.stringify(toSave))]
+    );
     res.write(`data: [DONE]\n\n`);
   } catch (err) {
     res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);

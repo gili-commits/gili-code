@@ -58,16 +58,21 @@ body { overflow-x: hidden; }
   display: flex;
   height: var(--nav);
   box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.nav::-webkit-scrollbar { display: none; }
 .nav-item {
-  flex: 1; display: flex; flex-direction: column;
+  flex: 0 0 auto; min-width: 52px; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   gap: 3px; cursor: pointer;
   color: var(--text-light);
-  font-size: 0.6rem; font-weight: 500;
+  font-size: 0.55rem; font-weight: 500;
   transition: color 0.2s, background 0.2s;
   border: none; background: none;
-  padding: 6px 2px;
+  padding: 6px 4px;
 }
 .nav-item svg { width: 22px; height: 22px; }
 .nav-item.active { color: var(--primary); }
@@ -412,6 +417,9 @@ input[type="range"]::-webkit-slider-thumb {
 }
 .chat-input-area textarea {
   flex: 1; resize: none; font-size: 0.88rem; min-height: 38px; max-height: 90px;
+}
+#freeconsult-chat .chat-messages {
+  max-height: min(58vh, 420px);
 }
 
 /* ── Responsive ── */
@@ -827,6 +835,31 @@ input[type="range"]::-webkit-slider-thumb {
     </div>
   </div>
 
+  <!-- FREE CONSULT -->
+  <div class="section" id="tab-freeconsult">
+    <div class="card">
+      <div class="card-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        ייעוץ חופשי
+      </div>
+      <p style="font-size:0.85rem;color:var(--text-light);line-height:1.65">
+        שיחה פתוחה עם מטפל ACT — בלי נושא קבוע. אפשר לשתף כל מה שעולה, והשיחה נשמרת בחשבון שלך.
+      </p>
+    </div>
+
+    <div id="freeconsult-chat" class="chat-container" style="display:block">
+      <div class="chat-header">
+        <span>שיחה עם המטפל</span>
+      </div>
+      <div class="chat-messages" id="freeconsult-chat-messages"></div>
+      <div class="chat-input-area">
+        <textarea id="freeconsult-chat-input" placeholder="כתוב כאן — מה שעולה לך..." rows="2"
+          onkeydown="chatKeydown(event,'freeconsult')"></textarea>
+        <button class="btn btn-primary btn-sm" onclick="sendFreeConsultMessage()">שלח</button>
+      </div>
+    </div>
+  </div>
+
   <!-- VALUES -->
   <div class="section" id="tab-values">
     <div class="card">
@@ -950,6 +983,10 @@ input[type="range"]::-webkit-slider-thumb {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     ערכים
   </button>
+  <button class="nav-item" id="nav-freeconsult" onclick="showTab('freeconsult')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+    ייעוץ חופשי
+  </button>
   <button class="nav-item" id="nav-tracking" onclick="showTab('tracking')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     מעקב
@@ -1001,6 +1038,7 @@ function showTab(name) {
   if (name === 'dreams') loadDreamHistory();
   if (name === 'avoidance') loadAvoidance();
   if (name === 'values') loadValues();
+  if (name === 'freeconsult') loadFreeConsult();
 }
 
 // ─── Toast ───────────────────────────────────────────────────────────────────
@@ -1678,6 +1716,103 @@ async function logout() {
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────
 const chatState = {};
+let freeConsultMessages = [];
+
+async function loadFreeConsult() {
+  try {
+    const data = await fetch('/api/free-consult').then(r => r.json());
+    freeConsultMessages = Array.isArray(data.messages) ? data.messages : [];
+    renderFreeConsultChat();
+  } catch (_) {
+    freeConsultMessages = [];
+    renderFreeConsultChat();
+  }
+}
+
+function renderFreeConsultChat() {
+  const el = document.getElementById('freeconsult-chat-messages');
+  el.innerHTML = '';
+  freeConsultMessages.forEach(m => {
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-msg ' + (m.role === 'assistant' ? 'assistant' : 'user');
+    bubble.textContent = m.content || '';
+    el.appendChild(bubble);
+  });
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendFreeConsultMessage() {
+  const inputEl = document.getElementById('freeconsult-chat-input');
+  const text = inputEl.value.trim();
+  if (!text) return;
+
+  inputEl.disabled = true;
+  freeConsultMessages.push({ role: 'user', content: text });
+  inputEl.value = '';
+  renderFreeConsultChat();
+
+  const messagesEl = document.getElementById('freeconsult-chat-messages');
+  const assistantBubble = document.createElement('div');
+  assistantBubble.className = 'chat-msg assistant loading';
+  messagesEl.appendChild(assistantBubble);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  let fullResponse = '';
+  try {
+    const resp = await fetch('/api/free-consult/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: freeConsultMessages })
+    });
+    if (!resp.ok) throw new Error('שגיאת שרת: ' + resp.status);
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (raw === '[DONE]') {
+          assistantBubble.classList.remove('loading');
+          freeConsultMessages.push({ role: 'assistant', content: fullResponse });
+          inputEl.disabled = false;
+          inputEl.focus();
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+          return;
+        }
+        try {
+          const data = JSON.parse(raw);
+          if (data.error) {
+            freeConsultMessages.pop();
+            renderFreeConsultChat();
+            toast('שגיאה: ' + data.error);
+            inputEl.disabled = false;
+            return;
+          }
+          if (data.text) {
+            fullResponse += data.text;
+            assistantBubble.textContent = fullResponse;
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+          }
+        } catch (_) {}
+      }
+    }
+    assistantBubble.classList.remove('loading');
+    if (fullResponse) freeConsultMessages.push({ role: 'assistant', content: fullResponse });
+    inputEl.disabled = false;
+  } catch (err) {
+    freeConsultMessages.pop();
+    renderFreeConsultChat();
+    toast('שגיאה: ' + err.message);
+    inputEl.disabled = false;
+  }
+}
 
 function initChatContext(contextId, originalUserMsg, claudeResponse) {
   chatState[contextId] = {
@@ -1703,7 +1838,11 @@ function closeChatBox(contextId) {
 }
 
 function chatKeydown(e, contextId) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(contextId); }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    if (contextId === 'freeconsult') sendFreeConsultMessage();
+    else sendChatMessage(contextId);
+  }
 }
 
 async function sendChatMessage(contextId) {
