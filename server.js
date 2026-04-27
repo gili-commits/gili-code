@@ -396,7 +396,7 @@ app.post('/api/dreams', requireAuth, async (req, res) => {
 3. **עדשת ACT**: מה החלום חושף על ערכים, דפוסי הימנעות, קשיחות קוגניטיבית?
 4. **קישור אישי**: כיצד זה מתחבר לאירועים ורגשות האחרונים שלי?`;
 
-    const full = await streamClaude(res, sys, msg, 2000);
+    const full = await streamClaude(res, sys, msg, 4000);
     const date = new Date().toISOString().split('T')[0];
     const symbolWords = ['מים', 'אש', 'בית', 'דרך', 'ים', 'הר', 'נחש', 'ילד', 'אור', 'חשיכה', 'טיסה', 'נפילה', 'דלת', 'מראה', 'יער', 'בעל חיים'];
     const symbols = symbolWords.filter(s => content.includes(s));
